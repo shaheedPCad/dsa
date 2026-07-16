@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 5 — Graphs, BFS & DFS</title>
+<style>
+  :root{
+    --bg:#0f1117;
+    --card:#1a1d2e;
+    --accent:#7CF29C;
+    --accent2:#4A9EFF;
+    --code-bg:#0d1117;
+    --text:#e6edf3;
+    --muted:#8B949E;
+    --kw:#FF7B72;
+    --str:#A5D6FF;
+    --com:#8B949E;
+    --fn:#D2A8FF;
+    --border:#2a2f45;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,sans-serif;
+    line-height:1.65;
+    font-size:16px;
+  }
+  /* top scroll progress */
+  #progressBar{
+    position:fixed;top:0;left:0;height:4px;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    z-index:1000;transition:width .1s ease-out;
+  }
+  .layout{
+    display:flex;max-width:1200px;margin:0 auto;gap:24px;
+    padding:24px 20px 80px;
+  }
+  /* sidebar */
+  aside{
+    width:240px;flex-shrink:0;
+  }
+  .sidebar-inner{
+    position:sticky;top:20px;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:14px;padding:18px 16px;
+    max-height:calc(100vh - 40px);overflow-y:auto;
+  }
+  .sidebar-inner h3{
+    margin:0 0 12px;font-size:.8rem;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted);
+  }
+  .sidebar-inner a{
+    display:block;color:var(--text);text-decoration:none;
+    padding:7px 10px;border-radius:8px;font-size:.9rem;
+    border-left:3px solid transparent;transition:all .15s;
+  }
+  .sidebar-inner a:hover{background:#232740;color:var(--accent);}
+  .sidebar-inner a.active{
+    background:#232740;border-left-color:var(--accent);color:var(--accent);
+  }
+  main{flex:1;min-width:0;}
+  header.page-head{
+    margin-bottom:24px;
+  }
+  header.page-head h1{
+    font-size:2rem;margin:0 0 6px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  header.page-head p{color:var(--muted);margin:0;}
+  /* cards */
+  .card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:14px;margin-bottom:22px;
+    box-shadow:0 4px 18px rgba(0,0,0,.28);
+    border-left:4px solid var(--accent);
+    overflow:hidden;
+  }
+  .card.blue{border-left-color:var(--accent2);}
+  .card-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px;cursor:pointer;user-select:none;gap:12px;
+  }
+  .card-head h2{
+    margin:0;font-size:1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .sec-num{
+    background:#232740;color:var(--accent);border-radius:8px;
+    padding:2px 9px;font-size:.85rem;font-weight:700;
+  }
+  .blue .sec-num{color:var(--accent2);}
+  .read-time{
+    font-size:.72rem;color:var(--muted);font-weight:400;
+    background:#232740;padding:3px 9px;border-radius:20px;
+    white-space:nowrap;
+  }
+  .arrow{
+    font-size:1rem;color:var(--muted);transition:transform .25s;flex-shrink:0;
+  }
+  .card.collapsed .arrow{transform:rotate(-90deg);}
+  .card-body{padding:0 22px 22px;}
+  .card.collapsed .card-body{display:none;}
+  p{margin:12px 0;}
+  h4{color:var(--accent2);margin:22px 0 8px;font-size:1.02rem;}
+  .blue h4{color:var(--accent);}
+  strong{color:#fff;}
+  code.inline{
+    background:var(--code-bg);padding:2px 6px;border-radius:5px;
+    font-family:"Courier New",monospace;color:var(--str);font-size:.9em;
+  }
+  ul,ol{padding-left:22px;}
+  li{margin:6px 0;}
+  .callout{
+    background:#20233a;border-radius:10px;padding:14px 16px;margin:16px 0;
+    border-left:3px solid var(--accent2);
+  }
+  .callout.warn{border-left-color:#FF7B72;}
+  .callout.good{border-left-color:var(--accent);}
+  .callout strong{color:var(--accent2);}
+  /* code blocks */
+  .code-wrap{position:relative;margin:16px 0;}
+  .copy-btn{
+    position:absolute;top:10px;right:10px;
+    background:#21262d;color:var(--text);border:1px solid var(--border);
+    border-radius:6px;padding:5px 12px;font-size:.75rem;cursor:pointer;
+    font-family:system-ui,sans-serif;transition:all .15s;z-index:2;
+  }
+  .copy-btn:hover{background:var(--accent);color:#0d1117;border-color:var(--accent);}
+  .copy-btn.copied{background:var(--accent);color:#0d1117;}
+  pre{
+    background:var(--code-bg);border:1px solid var(--border);
+    border-radius:10px;padding:18px;overflow-x:auto;margin:0;
+    font-family:"Courier New",monospace;font-size:.86rem;line-height:1.55;
+  }
+  pre code{font-family:"Courier New",monospace;color:var(--text);white-space:pre;}
+  .kw{color:var(--kw);}
+  .str{color:var(--str);}
+  .com{color:var(--com);font-style:italic;}
+  .fn{color:var(--fn);}
+  .num{color:#79C0FF;}
+  /* complexity pills */
+  .pill{
+    display:inline-block;padding:4px 12px;border-radius:20px;
+    font-size:.78rem;font-weight:700;margin:4px 6px 4px 0;
+    font-family:"Courier New",monospace;
+  }
+  .pill.time{background:rgba(124,242,156,.15);color:var(--accent);border:1px solid rgba(124,242,156,.35);}
+  .pill.space{background:rgba(74,158,255,.15);color:var(--accent2);border:1px solid rgba(74,158,255,.35);}
+  .pill.warnp{background:rgba(255,123,114,.15);color:#FF7B72;border:1px solid rgba(255,123,114,.35);}
+  /* progress checklist */
+  .checklist{
+    background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent2);
+    border-radius:14px;padding:20px 22px;margin-bottom:22px;
+  }
+  .checklist h2{margin:0 0 6px;font-size:1.2rem;}
+  .checklist .pct{color:var(--muted);font-size:.85rem;margin-bottom:14px;}
+  .check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}
+  .check-item{
+    display:flex;align-items:center;gap:10px;background:#20233a;
+    padding:9px 12px;border-radius:8px;cursor:pointer;font-size:.88rem;
+    transition:background .15s;
+  }
+  .check-item:hover{background:#262a45;}
+  .check-item input{
+    appearance:none;width:18px;height:18px;border:2px solid var(--muted);
+    border-radius:5px;cursor:pointer;flex-shrink:0;position:relative;transition:all .15s;
+  }
+  .check-item input:checked{background:var(--accent);border-color:var(--accent);}
+  .check-item input:checked::after{
+    content:"✓";position:absolute;color:#0d1117;font-size:12px;font-weight:900;
+    top:-2px;left:2px;
+  }
+  .check-item.done span{text-decoration:line-through;color:var(--muted);}
+  .mini-bar{height:8px;background:#20233a;border-radius:20px;overflow:hidden;margin-bottom:14px;}
+  .mini-bar>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;}
+  /* diagram: graph nodes */
+  .graph-diagram{
+    position:relative;height:300px;margin:20px auto;max-width:460px;
+    background:#12152080;border-radius:12px;border:1px solid var(--border);
+  }
+  .gnode{
+    position:absolute;width:48px;height:48px;border-radius:50%;
+    background:var(--card);border:3px solid var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;color:var(--accent);z-index:2;font-size:1.05rem;
+  }
+  .gnode.b{border-color:var(--accent2);color:var(--accent2);}
+  .edge{
+    position:absolute;height:3px;background:var(--muted);z-index:1;
+    transform-origin:0 50%;border-radius:2px;
+  }
+  /* trace steps */
+  .trace{display:flex;flex-direction:column;gap:10px;margin:16px 0;}
+  .trace-step{
+    display:flex;align-items:center;gap:12px;background:#20233a;
+    padding:12px 14px;border-radius:10px;border-left:3px solid var(--accent);
+    flex-wrap:wrap;
+  }
+  .trace-step .badge{
+    background:var(--accent);color:#0d1117;font-weight:700;border-radius:6px;
+    padding:3px 9px;font-size:.8rem;flex-shrink:0;
+  }
+  .blue .trace-step{border-left-color:var(--accent2);}
+  .blue .trace-step .badge{background:var(--accent2);}
+  .nodechip{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:30px;height:30px;padding:0 6px;border-radius:8px;background:var(--card);
+    border:2px solid var(--border);font-family:"Courier New",monospace;font-weight:700;margin:2px;
+  }
+  .nodechip.visited{border-color:var(--accent);color:var(--accent);}
+  .nodechip.current{border-color:var(--accent2);color:var(--accent2);background:#1e2a45;}
+  .nodechip.inq{border-color:#FFD866;color:#FFD866;}
+  .arrow-r{color:var(--muted);font-size:1.1rem;}
+  .queue-box{
+    display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+    background:#12152080;padding:10px;border-radius:8px;margin-top:6px;
+  }
+  .queue-label{font-size:.75rem;color:var(--muted);font-family:"Courier New",monospace;}
+  /* self test */
+  .qa{
+    background:#20233a;border-radius:10px;margin:12px 0;overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .qa-q{
+    padding:14px 16px;cursor:pointer;font-weight:600;display:flex;
+    justify-content:space-between;gap:12px;align-items:center;
+  }
+  .qa-q:hover{background:#262a45;}
+  .qa-q .q-ar{color:var(--accent2);transition:transform .2s;}
+  .qa.open .q-ar{transform:rotate(90deg);}
+  .qa-a{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s;color:var(--muted);}
+  .qa.open .qa-a{padding:0 16px 16px;max-height:600px;color:var(--text);}
+  .qa-a strong{color:var(--accent);}
+  /* back to top */
+  #toTop{
+    position:fixed;bottom:26px;right:26px;width:48px;height:48px;border-radius:50%;
+    background:var(--accent);color:#0d1117;border:none;font-size:1.3rem;cursor:pointer;
+    display:none;align-items:center;justify-content:center;z-index:900;font-weight:900;
+    box-shadow:0 4px 16px rgba(0,0,0,.4);transition:transform .15s;
+  }
+  #toTop:hover{transform:translateY(-3px);}
+  .summary-card{border-left-color:#FFD866;}
+  .summary-card .sec-num{color:#FFD866;}
+  .key-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:8px;}
+  .key-box{background:#20233a;border-radius:10px;padding:14px;border-top:3px solid var(--accent);}
+  .key-box h5{margin:0 0 6px;color:var(--accent);font-size:.95rem;}
+  .key-box p{margin:0;font-size:.86rem;color:var(--muted);}
+  @media(max-width:860px){
+    aside{display:none;}
+    .layout{padding:16px 14px 80px;}
+    header.page-head h1{font-size:1.5rem;}
+  }
+</style>
+</head>
+<body>
+<div id="progressBar"></div>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-inner">
+      <h3>On this page</h3>
+      <a href="#s1">1 · What is a Graph</a>
+      <a href="#s2">2 · Representing a Graph</a>
+      <a href="#s3">3 · The Visited Set</a>
+      <a href="#s4">4 · DFS</a>
+      <a href="#s5">5 · BFS</a>
+      <a href="#s6">6 · LC 200 Islands</a>
+      <a href="#s7">7 · LC 133 Clone Graph</a>
+      <a href="#s8">8 · Templates</a>
+      <a href="#summary">★ Summary</a>
+      <a href="#selftest">✎ Self Test</a>
+    </div>
+  </aside>
+
+  <main>
+    <header class="page-head">
+      <h1>Day 5 — Graphs, BFS &amp; DFS</h1>
+      <p>From zero to interview-ready. Read top to bottom, check off each section as you go.</p>
+    </header>
+
+    <!-- PROGRESS CHECKLIST -->
+    <div class="checklist" id="checklist">
+      <h2>📋 Your Progress</h2>
+      <div class="pct" id="pctText">0 of 8 sections complete</div>
+      <div class="mini-bar"><div id="miniFill"></div></div>
+      <div class="check-grid" id="checkGrid">
+        <label class="check-item"><input type="checkbox" data-k="c1"><span>1 · What is a Graph</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c2"><span>2 · Representing a Graph</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c3"><span>3 · The Visited Set</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c4"><span>4 · DFS</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c5"><span>5 · BFS</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c6"><span>6 · Number of Islands</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c7"><span>7 · Clone Graph</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c8"><span>8 · Templates</span></label>
+      </div>
+    </div>
+
+    <!-- SECTION 1 -->
+    <section class="card" id="s1">
+      <div class="card-head">
+        <h2><span class="sec-num">1</span> What is a Graph</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 4 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p>A <strong>graph</strong> is just a set of things and the connections between them. The "things" are called <strong>nodes</strong> (also called <em>vertices</em>), and the connections are called <strong>edges</strong>. That is the entire idea. Everything else is detail.</p>
+
+        <h4>Real world analogy: cities and roads</h4>
+        <p>Picture a map. Each <strong>city</strong> is a node. Each <strong>road</strong> connecting two cities is an edge. If you can drive from Boston to New York, there is an edge between the Boston node and the New York node. A graph is nothing more than a formal way of writing down "what is connected to what."</p>
+
+        <h4>Directed vs Undirected</h4>
+        <ul>
+          <li><strong>Undirected graph</strong> — edges go both ways, like a <strong>two-way street</strong>. If A connects to B, then B connects to A. Friendship on Facebook is undirected: if you are my friend, I am your friend.</li>
+          <li><strong>Directed graph</strong> — edges have a direction, like a <strong>one-way street</strong>. A → B does <em>not</em> mean B → A. "Following" on Twitter/X is directed: I can follow you without you following me.</li>
+        </ul>
+
+        <h4>Weighted vs Unweighted</h4>
+        <ul>
+          <li><strong>Unweighted</strong> — an edge either exists or it doesn't. We only care about connection. "Is there a road?" Yes or no.</li>
+          <li><strong>Weighted</strong> — each edge carries a number (a <em>weight</em>): distance, cost, time. "The road from Boston to NYC is 215 miles." Weights matter for shortest-path problems like Dijkstra, but for plain BFS/DFS we usually ignore them.</li>
+        </ul>
+
+        <div class="callout good">
+          <strong>Mental model:</strong> Node = a dot. Edge = a line between two dots. Direction = does the line have an arrowhead? Weight = is there a number written on the line?
+        </div>
+
+        <h4>A simple undirected graph with 5 nodes</h4>
+        <p>Below, nodes <strong>0–4</strong> are dots and the gray lines are edges. Node 0 connects to 1 and 4; node 1 connects to 0, 2, and 3; and so on. There are no arrowheads, so every connection works both ways.</p>
+
+        <div class="graph-diagram">
+          <!-- nodes -->
+          <div class="gnode"   style="top:20px;  left:200px;">0</div>
+          <div class="gnode"   style="top:110px; left:60px;">1</div>
+          <div class="gnode b" style="top:110px; left:340px;">4</div>
+          <div class="gnode"   style="top:230px; left:120px;">2</div>
+          <div class="gnode"   style="top:230px; left:280px;">3</div>
+          <!-- edges: positioned/rotated manually -->
+          <!-- 0-1 -->
+          <div class="edge" style="top:52px;left:96px;width:132px;transform:rotate(35deg);"></div>
+          <!-- 0-4 -->
+          <div class="edge" style="top:52px;left:236px;width:132px;transform:rotate(28deg);"></div>
+          <!-- 1-2 -->
+          <div class="edge" style="top:142px;left:88px;width:100px;transform:rotate(60deg);"></div>
+          <!-- 1-3 -->
+          <div class="edge" style="top:140px;left:96px;width:225px;transform:rotate(28deg);"></div>
+          <!-- 2-3 -->
+          <div class="edge" style="top:254px;left:156px;width:130px;transform:rotate(0deg);"></div>
+          <!-- 3-4 -->
+          <div class="edge" style="top:158px;left:308px;width:88px;transform:rotate(112deg);"></div>
+        </div>
+        <p style="text-align:center;color:var(--muted);font-size:.85rem;">Edges: 0–1, 0–4, 1–2, 1–3, 2–3, 3–4</p>
+      </div>
+    </section>
+
+    <!-- SECTION 2 -->
+    <section class="card blue" id="s2">
+      <div class="card-head">
+        <h2><span class="sec-num">2</span> How to Represent a Graph in Code</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 6 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p>A drawing of dots and lines is nice for humans, but code needs a data structure. There are two standard ways to store a graph: an <strong>adjacency list</strong> and an <strong>adjacency matrix</strong>.</p>
+
+        <h4>Adjacency Matrix</h4>
+        <p>Imagine an N×N grid where <code class="inline">matrix[i][j] = 1</code> means "there is an edge from i to j," and <code class="inline">0</code> means "no edge." For 5 nodes that is a 5×5 grid of 0s and 1s.</p>
+        <ul>
+          <li><strong>Pro:</strong> checking "is there an edge between i and j?" is instant — O(1).</li>
+          <li><strong>Con:</strong> it always uses O(N²) space, even if the graph has very few edges. A social network with a million users would need a million-by-million grid. That is a trillion cells. Impossible.</li>
+        </ul>
+
+        <h4>Adjacency List</h4>
+        <p>For each node, store a <em>list</em> of its direct neighbors. Node 1's list is <code class="inline">[0, 2, 3]</code> because 1 connects to 0, 2, and 3. You only store edges that actually exist.</p>
+        <ul>
+          <li><strong>Pro:</strong> space is O(N + E) where E is the number of edges. Real-world graphs are usually <em>sparse</em> (few edges relative to possible edges), so this is far smaller.</li>
+          <li><strong>Pro:</strong> iterating over a node's neighbors is natural and fast — exactly what BFS and DFS need.</li>
+        </ul>
+
+        <div class="callout good">
+          <strong>Interview rule of thumb:</strong> Use the <strong>adjacency list</strong> unless the problem specifically demands O(1) edge lookups or the graph is tiny and dense. 95% of interview graph problems use adjacency lists. It maps perfectly onto how BFS/DFS "visit each neighbor."
+        </div>
+
+        <h4>Building an adjacency list from an edge list</h4>
+        <p>You are usually handed edges as a list of pairs, like <code class="inline">[[0,1],[0,4],[1,2],[1,3],[2,3],[3,4]]</code>. Here is how to turn that into an adjacency list (undirected):</p>
+
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> defaultdict
+
+<span class="kw">def</span> <span class="fn">build_graph</span>(n, edges):
+    <span class="com"># n = number of nodes, edges = list of [u, v] pairs</span>
+    adj = defaultdict(list)      <span class="com"># empty list for every new key</span>
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:      <span class="com"># unpack each edge into its two endpoints</span>
+        adj[u].append(v)         <span class="com"># u can reach v</span>
+        adj[v].append(u)         <span class="com"># v can reach u  (undirected = both ways)</span>
+    <span class="kw">return</span> adj</code></pre>
+        </div>
+
+        <h4>Line by line</h4>
+        <ul>
+          <li><code class="inline">from collections import defaultdict</code> — a <code class="inline">defaultdict(list)</code> automatically creates an empty list the first time you touch a new key, so you never write "if the key doesn't exist, create it."</li>
+          <li><code class="inline">adj = defaultdict(list)</code> — our graph. Keys are nodes, values are lists of neighbors.</li>
+          <li><code class="inline">for u, v in edges:</code> — walk through every edge. Python unpacks the pair <code class="inline">[u, v]</code> directly into two variables.</li>
+          <li><code class="inline">adj[u].append(v)</code> — record that <strong>u</strong> has a neighbor <strong>v</strong>.</li>
+          <li><code class="inline">adj[v].append(u)</code> — because this graph is undirected, the edge works both ways, so we also record that <strong>v</strong> has neighbor <strong>u</strong>. <strong>If the graph were directed, you would delete this line</strong> — you'd only record u → v.</li>
+          <li><code class="inline">return adj</code> — hand back the finished adjacency list.</li>
+        </ul>
+        <p><span class="pill time">Build time: O(E)</span><span class="pill space">Space: O(N + E)</span></p>
+      </div>
+    </section>
+
+    <!-- SECTION 3 -->
+    <section class="card" id="s3">
+      <div class="card-head">
+        <h2><span class="sec-num">3</span> The Visited Set</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 4 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p>This is the single most important habit in graph traversal. <strong>Whenever you traverse a graph, you keep a <em>visited</em> set</strong> — a record of every node you have already been to.</p>
+
+        <h4>Why? Because graphs have cycles.</h4>
+        <p>In our example, 1 → 2 → 3 → 1 forms a loop. If you follow edges blindly, you'd go 1 → 2 → 3 → 1 → 2 → 3 → 1 … forever. The program never ends. It either hangs or crashes with a stack overflow.</p>
+
+        <div class="callout warn">
+          <strong>Without a visited set:</strong> you revisit nodes, walk in circles, and loop infinitely. Trees don't have this problem (no cycles), which is why tree traversals often skip it — but general graphs almost always need it.
+        </div>
+
+        <h4>What "visited" actually does</h4>
+        <p>Before you process a node, you ask: "have I seen this one already?" If yes, skip it. If no, mark it seen and continue. This guarantees each node is processed <strong>exactly once</strong>, which also gives graph traversal its clean O(N + E) running time.</p>
+
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code>visited = <span class="kw">set</span>()            <span class="com"># nodes we've already handled</span>
+
+<span class="kw">def</span> <span class="fn">visit</span>(node):
+    <span class="kw">if</span> node <span class="kw">in</span> visited:    <span class="com"># seen before? -> stop, don't loop</span>
+        <span class="kw">return</span>
+    visited.add(node)      <span class="com"># mark it NOW, before exploring neighbors</span>
+    <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:   <span class="com"># look at each neighbor</span>
+        visit(nei)             <span class="com"># and recurse into the unseen ones</span></code></pre>
+        </div>
+
+        <h4>Line by line</h4>
+        <ul>
+          <li><code class="inline">visited = set()</code> — a set gives O(1) membership checks (<code class="inline">in</code>), which is exactly what we need to keep traversal fast.</li>
+          <li><code class="inline">if node in visited: return</code> — the guard. If we've already been here, bail out immediately. <strong>This one line is what prevents the infinite loop.</strong></li>
+          <li><code class="inline">visited.add(node)</code> — mark the node as seen <em>before</em> touching its neighbors. Marking early is critical: if you wait, two paths could enter the same node before either marks it.</li>
+          <li><code class="inline">for nei in adj[node]:</code> — iterate this node's neighbors from the adjacency list.</li>
+          <li><code class="inline">visit(nei)</code> — recurse. The guard at the top of each call safely ignores anything already visited.</li>
+        </ul>
+        <div class="callout good">
+          <strong>Habit to burn in:</strong> the moment you write graph-traversal code, write the visited set in the same breath. Mark on entry, check before entering.
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4 -->
+    <section class="card blue" id="s4">
+      <div class="card-head">
+        <h2><span class="sec-num">4</span> DFS — Depth First Search</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 9 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p><strong>Depth First Search</strong> means: pick a path and follow it <em>as deep as you can</em> before turning back.</p>
+
+        <h4>Analogy: exploring a maze</h4>
+        <p>You're in a maze. Your strategy: always take the first door you see, keep going until you hit a dead end, then <strong>backtrack</strong> to the last spot with an unexplored door and try that one. You go <em>deep</em> first, exhausting one branch completely before considering the next. That is DFS.</p>
+
+        <h4>The call stack — what recursion really does</h4>
+        <p>When a function calls itself, the computer pauses the current call, remembers exactly where it was (this saved state is a <strong>stack frame</strong>), and pushes it onto the <strong>call stack</strong>. When the inner call finishes, the top frame is popped and the paused call resumes. DFS <em>is</em> this stack behavior: going deeper = pushing frames; hitting a dead end and backtracking = popping frames. Recursion gives you a stack for free.</p>
+
+        <h4>Recursive DFS</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">def</span> <span class="fn">dfs</span>(node, adj, visited):
+    <span class="kw">if</span> node <span class="kw">in</span> visited:      <span class="com"># already explored -> stop</span>
+        <span class="kw">return</span>
+    visited.add(node)        <span class="com"># mark on entry</span>
+    <span class="fn">print</span>(node)              <span class="com"># "process" the node (here: just show it)</span>
+    <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:     <span class="com"># for each neighbor...</span>
+        <span class="fn">dfs</span>(nei, adj, visited)  <span class="com"># ...dive deep into it first</span></code></pre>
+        </div>
+        <ul>
+          <li><code class="inline">if node in visited: return</code> — the guard from Section 3. No infinite loops.</li>
+          <li><code class="inline">visited.add(node)</code> — mark before we explore, so neighbors that point back at us are ignored.</li>
+          <li><code class="inline">print(node)</code> — stand-in for "do the work." In real problems this is where you count, collect, or compute.</li>
+          <li><code class="inline">for nei in adj[node]:</code> — loop over neighbors.</li>
+          <li><code class="inline">dfs(nei, ...)</code> — the recursive dive. We fully explore <code class="inline">nei</code> and everything reachable from it <em>before</em> moving to the next neighbor. That "finish one branch completely first" is the depth-first behavior.</li>
+        </ul>
+
+        <h4>Iterative DFS (explicit stack)</h4>
+        <p>Recursion hides a stack. Here we make it visible with our own <code class="inline">stack</code> list. Same order of ideas, no recursion depth limit to worry about.</p>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">def</span> <span class="fn">dfs_iter</span>(start, adj):
+    visited = <span class="kw">set</span>()
+    stack = [start]              <span class="com"># the frontier, LIFO</span>
+    <span class="kw">while</span> stack:                 <span class="com"># while there's somewhere left to go</span>
+        node = stack.pop()       <span class="com"># take the MOST RECENT node (LIFO -> deep)</span>
+        <span class="kw">if</span> node <span class="kw">in</span> visited:
+            <span class="kw">continue</span>            <span class="com"># skip if already done</span>
+        visited.add(node)
+        <span class="fn">print</span>(node)              <span class="com"># process it</span>
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:     <span class="com"># push neighbors to revisit later</span>
+            <span class="kw">if</span> nei <span class="kw">not in</span> visited:
+                stack.append(nei)</code></pre>
+        </div>
+        <div class="callout">
+          <strong>Why a stack gives the same behavior as recursion:</strong> <code class="inline">stack.pop()</code> always removes the <em>most recently added</em> item — that's <strong>LIFO</strong> (Last In, First Out). The neighbor you just pushed is the next one you explore, so you keep plunging deeper down one branch before backing up. That is exactly what the call stack does automatically during recursion.
+        </div>
+
+        <h4>Step-by-step trace</h4>
+        <p>Start DFS at node <strong>0</strong> in our 5-node graph (neighbors visited in numeric order). Watch how it dives deep down one branch before backing up.</p>
+        <div class="trace blue">
+          <div class="trace-step"><span class="badge">1</span><div>Visit <span class="nodechip current">0</span>. Mark it. Neighbors: 1, 4. Dive into <strong>1</strong> first.</div></div>
+          <div class="trace-step"><span class="badge">2</span><div><span class="nodechip visited">0</span> → visit <span class="nodechip current">1</span>. Mark it. Neighbors: 0(seen), 2, 3. Dive into <strong>2</strong>.</div></div>
+          <div class="trace-step"><span class="badge">3</span><div><span class="nodechip visited">0</span><span class="nodechip visited">1</span> → visit <span class="nodechip current">2</span>. Mark it. Neighbors: 1(seen), 3. Dive into <strong>3</strong>.</div></div>
+          <div class="trace-step"><span class="badge">4</span><div><span class="nodechip visited">0</span><span class="nodechip visited">1</span><span class="nodechip visited">2</span> → visit <span class="nodechip current">3</span>. Mark it. Neighbors: 1(seen), 2(seen), 4. Dive into <strong>4</strong>.</div></div>
+          <div class="trace-step"><span class="badge">5</span><div><span class="nodechip visited">0</span><span class="nodechip visited">1</span><span class="nodechip visited">2</span><span class="nodechip visited">3</span> → visit <span class="nodechip current">4</span>. Mark it. Neighbors: 0(seen), 3(seen). Dead end — <strong>backtrack</strong>.</div></div>
+          <div class="trace-step"><span class="badge">✓</span><div>All neighbors seen everywhere. Final DFS order: <span class="nodechip visited">0</span><span class="arrow-r">→</span><span class="nodechip visited">1</span><span class="arrow-r">→</span><span class="nodechip visited">2</span><span class="arrow-r">→</span><span class="nodechip visited">3</span><span class="arrow-r">→</span><span class="nodechip visited">4</span></div></div>
+        </div>
+
+        <h4>When to use DFS vs BFS</h4>
+        <ul>
+          <li><strong>Use DFS when</strong> you need to explore full paths, detect cycles, do topological sort, flood-fill a region (like counting islands), or when the solution is likely "deep." It's also the simplest to write recursively.</li>
+          <li><strong>Use BFS when</strong> you need the <strong>shortest path in an unweighted graph</strong> or want to explore level by level (see next section).</li>
+        </ul>
+        <p><span class="pill time">Time: O(V + E)</span><span class="pill space">Space: O(V)</span> — every vertex and edge is touched once; the stack/recursion can hold up to V nodes.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 5 -->
+    <section class="card" id="s5">
+      <div class="card-head">
+        <h2><span class="sec-num">5</span> BFS — Breadth First Search</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 8 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p><strong>Breadth First Search</strong> explores the graph <em>level by level</em>: first all nodes 1 step away, then all nodes 2 steps away, and so on.</p>
+
+        <h4>Analogy: ripples in water</h4>
+        <p>Drop a stone in a pond. The ripple spreads outward in a perfect ring, one distance at a time. BFS is that ripple: it finishes everything at distance 1 before touching anything at distance 2. Because it expands in rings of equal distance, <strong>the first time BFS reaches a node, it has found the shortest path to it</strong> (in an unweighted graph).</p>
+
+        <h4>Why a queue and not a stack?</h4>
+        <p>To process nodes in the order you <em>discovered</em> them, you need <strong>FIFO</strong> — First In, First Out. A <strong>queue</strong> is FIFO: the first node added is the first removed, like a line at a coffee shop. That preserves the level-by-level ring order.</p>
+        <div class="callout">
+          <strong>Contrast with DFS:</strong> DFS uses a <strong>stack (LIFO)</strong> — newest first — so it plunges deep. BFS uses a <strong>queue (FIFO)</strong> — oldest first — so it spreads wide. The <em>only</em> structural difference between iterative BFS and DFS is stack vs queue. Same code shape, opposite data structure.
+        </div>
+
+        <h4>BFS code</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
+
+<span class="kw">def</span> <span class="fn">bfs</span>(start, adj):
+    visited = {start}            <span class="com"># mark start immediately</span>
+    queue = deque([start])       <span class="com"># FIFO frontier</span>
+    <span class="kw">while</span> queue:                 <span class="com"># until nothing left to explore</span>
+        node = queue.popleft()   <span class="com"># take the OLDEST node (FIFO)</span>
+        <span class="fn">print</span>(node)              <span class="com"># process it</span>
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:     <span class="com"># check each neighbor</span>
+            <span class="kw">if</span> nei <span class="kw">not in</span> visited:
+                visited.add(nei) <span class="com"># mark WHEN enqueued, not when popped</span>
+                queue.append(nei)<span class="com"># add to the back of the line</span></code></pre>
+        </div>
+        <ul>
+          <li><code class="inline">from collections import deque</code> — a <code class="inline">deque</code> gives O(1) removal from the front. A plain list's <code class="inline">pop(0)</code> is O(N), so always use deque for BFS.</li>
+          <li><code class="inline">visited = {start}</code> — mark the start immediately so it never gets re-added.</li>
+          <li><code class="inline">queue = deque([start])</code> — our frontier, seeded with the start node.</li>
+          <li><code class="inline">while queue:</code> — keep going while there are discovered-but-unprocessed nodes.</li>
+          <li><code class="inline">node = queue.popleft()</code> — remove from the <em>front</em>. This FIFO order is what makes it breadth-first.</li>
+          <li><code class="inline">for nei in adj[node]:</code> — look at every neighbor.</li>
+          <li><code class="inline">if nei not in visited:</code> — only handle new nodes.</li>
+          <li><code class="inline">visited.add(nei)</code> — <strong>mark when you enqueue, not when you dequeue.</strong> If you wait until popping, the same node could be added to the queue several times before it's ever processed — a classic bug.</li>
+          <li><code class="inline">queue.append(nei)</code> — push to the back of the line so it's handled after everything currently ahead of it.</li>
+        </ul>
+
+        <h4>Step-by-step trace with queue state</h4>
+        <p>BFS from node <strong>0</strong>. Watch the queue expand in rings.</p>
+        <div class="trace">
+          <div class="trace-step"><span class="badge">Start</span><div>Mark 0. <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">0</span></div></div></div>
+          <div class="trace-step"><span class="badge">1</span><div>Pop <span class="nodechip current">0</span>. Add unseen neighbors 1, 4. <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">1</span><span class="nodechip inq">4</span></div></div></div>
+          <div class="trace-step"><span class="badge">2</span><div>Pop <span class="nodechip current">1</span>. Neighbors 2, 3 are new (0 seen). <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">4</span><span class="nodechip inq">2</span><span class="nodechip inq">3</span></div></div></div>
+          <div class="trace-step"><span class="badge">3</span><div>Pop <span class="nodechip current">4</span>. Neighbors 0, 3 already seen — add nothing. <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">2</span><span class="nodechip inq">3</span></div></div></div>
+          <div class="trace-step"><span class="badge">4</span><div>Pop <span class="nodechip current">2</span>. Neighbors 1, 3 already seen. <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">3</span></div></div></div>
+          <div class="trace-step"><span class="badge">5</span><div>Pop <span class="nodechip current">3</span>. All neighbors seen. <div class="queue-box"><span class="queue-label">queue:</span><span style="color:var(--muted);font-size:.8rem;">empty</span></div></div></div>
+          <div class="trace-step"><span class="badge">✓</span><div>Final BFS order: <span class="nodechip visited">0</span><span class="arrow-r">→</span><span class="nodechip visited">1</span><span class="arrow-r">→</span><span class="nodechip visited">4</span><span class="arrow-r">→</span><span class="nodechip visited">2</span><span class="arrow-r">→</span><span class="nodechip visited">3</span>. Notice 1 &amp; 4 (distance 1) come before 2 &amp; 3 (distance 2).</div></div>
+        </div>
+
+        <h4>When to use BFS vs DFS</h4>
+        <ul>
+          <li><strong>BFS wins for shortest path</strong> in unweighted graphs — the ripple reaches nearest nodes first, so the first arrival is the shortest.</li>
+          <li><strong>BFS wins for "level" or "minimum steps"</strong> problems (word ladder, rotting oranges, minimum moves).</li>
+          <li><strong>DFS wins for</strong> path existence, cycle detection, connected components / flood fill, topological sort, and anything where recursion is cleaner.</li>
+        </ul>
+        <p><span class="pill time">Time: O(V + E)</span><span class="pill space">Space: O(V)</span> — same asymptotics as DFS; the queue can hold up to V nodes.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 6 -->
+    <section class="card blue" id="s6">
+      <div class="card-head">
+        <h2><span class="sec-num">6</span> LC 200 — Number of Islands</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 8 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <h4>The problem in plain English</h4>
+        <p>You're given a 2D grid of <code class="inline">'1'</code>s (land) and <code class="inline">'0'</code>s (water). An <strong>island</strong> is a group of <code class="inline">'1'</code>s connected horizontally or vertically (not diagonally). Count how many separate islands there are.</p>
+
+        <h4>Intuition — the NeetCode way</h4>
+        <p>Here's the key reframe: <strong>the grid is a graph in disguise.</strong> Every land cell is a node. Two land cells are connected (share an edge) if they're directly up/down/left/right of each other. An <strong>island is just a connected component</strong> — a clump of nodes all reachable from each other.</p>
+        <p>So the question "how many islands?" becomes "how many connected components of land are there?" To count components, we do this: <strong>scan the grid; every time we hit a land cell we haven't seen, that's a brand-new island — so add 1, then DFS to flood the entire island and mark all its cells visited</strong> so we never count it again.</p>
+        <p><strong>Why DFS makes sense:</strong> starting from one land cell, DFS naturally spreads to every connected land cell (up/down/left/right, recursively), covering the whole island in one call. <strong>What the visited set represents:</strong> "this land has already been counted as part of some island." Here we can save memory by <em>sinking</em> visited land — overwriting <code class="inline">'1'</code> with <code class="inline">'0'</code> — instead of a separate set.</p>
+
+        <h4>Full solution</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">numIslands</span>(self, grid):
+        <span class="kw">if</span> <span class="kw">not</span> grid:
+            <span class="kw">return</span> <span class="num">0</span>
+        rows, cols = <span class="fn">len</span>(grid), <span class="fn">len</span>(grid[<span class="num">0</span>])
+        count = <span class="num">0</span>
+
+        <span class="kw">def</span> <span class="fn">dfs</span>(r, c):
+            <span class="com"># out of bounds, or water -> stop</span>
+            <span class="kw">if</span> r &lt; <span class="num">0</span> <span class="kw">or</span> r &gt;= rows <span class="kw">or</span> c &lt; <span class="num">0</span> <span class="kw">or</span> c &gt;= cols <span class="kw">or</span> grid[r][c] == <span class="str">'0'</span>:
+                <span class="kw">return</span>
+            grid[r][c] = <span class="str">'0'</span>          <span class="com"># "sink" this land = mark visited</span>
+            <span class="fn">dfs</span>(r + <span class="num">1</span>, c)              <span class="com"># down</span>
+            <span class="fn">dfs</span>(r - <span class="num">1</span>, c)              <span class="com"># up</span>
+            <span class="fn">dfs</span>(r, c + <span class="num">1</span>)              <span class="com"># right</span>
+            <span class="fn">dfs</span>(r, c - <span class="num">1</span>)              <span class="com"># left</span>
+
+        <span class="kw">for</span> r <span class="kw">in</span> <span class="fn">range</span>(rows):
+            <span class="kw">for</span> c <span class="kw">in</span> <span class="fn">range</span>(cols):
+                <span class="kw">if</span> grid[r][c] == <span class="str">'1'</span>:   <span class="com"># found new, unvisited land</span>
+                    count += <span class="num">1</span>          <span class="com"># it's a fresh island</span>
+                    <span class="fn">dfs</span>(r, c)             <span class="com"># flood the whole island</span>
+        <span class="kw">return</span> count</code></pre>
+        </div>
+
+        <h4>Every line, tied back to the intuition</h4>
+        <ul>
+          <li><code class="inline">if not grid: return 0</code> — empty grid, no islands. Guard against edge cases.</li>
+          <li><code class="inline">rows, cols = len(grid), len(grid[0])</code> — grid dimensions, used for bounds checks.</li>
+          <li><code class="inline">count = 0</code> — our island counter (= number of connected components).</li>
+          <li><code class="inline">def dfs(r, c):</code> — floods one island starting from cell (r, c). This is the "spread to all connected land" step.</li>
+          <li><code class="inline">if r &lt; 0 or ... or grid[r][c] == '0': return</code> — the base case. Stop if we walk off the grid <em>or</em> hit water. Water isn't part of the island; edges of the grid bound it.</li>
+          <li><code class="inline">grid[r][c] = '0'</code> — <strong>this is the visited mark.</strong> By sinking the land to water, we guarantee we never revisit or recount this cell. It's the memory-saving alternative to a visited set.</li>
+          <li><code class="inline">dfs(r+1,c)</code> … <code class="inline">dfs(r,c-1)</code> — recurse into all four orthogonal neighbors. This is how one call spreads across the entire connected island.</li>
+          <li><code class="inline">for r in range(rows): for c in range(cols):</code> — scan every cell.</li>
+          <li><code class="inline">if grid[r][c] == '1':</code> — a land cell that's still <code class="inline">'1'</code> hasn't been flooded yet, so it belongs to an island we haven't counted.</li>
+          <li><code class="inline">count += 1</code> — new connected component found → increment. This line runs <strong>once per island</strong>, because the <code class="inline">dfs</code> right after it sinks the rest of that island.</li>
+          <li><code class="inline">dfs(r, c)</code> — flood-fill so the entire island turns to water and won't be counted again.</li>
+          <li><code class="inline">return count</code> — total number of islands.</li>
+        </ul>
+
+        <h4>Complexity</h4>
+        <p><span class="pill time">Time: O(rows × cols)</span> Every cell is visited a constant number of times — once by the outer scan, and at most once by a DFS that sinks it.</p>
+        <p><span class="pill space">Space: O(rows × cols)</span> Worst case the recursion stack goes as deep as the number of cells — imagine a grid that's entirely land; DFS could stack every cell before returning.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 7 -->
+    <section class="card" id="s7">
+      <div class="card-head">
+        <h2><span class="sec-num">7</span> LC 133 — Clone Graph</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 8 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <h4>The problem</h4>
+        <p>You're given a reference to one node of a connected undirected graph. Return a <strong>deep copy</strong> of the whole graph — a completely independent set of new nodes with the same structure and connections.</p>
+
+        <h4>What "cloning" really means</h4>
+        <p>You can't just return the node you were given, and you can't reuse its neighbors. A <strong>deep copy</strong> means <em>brand-new node objects</em> that mirror the originals. If the original has node A connected to B, your clone must have a new A' connected to a new B' — and critically, if two original nodes both point to the same neighbor, both clones must point to the same <em>single</em> cloned neighbor, not two separate copies.</p>
+
+        <h4>Intuition</h4>
+        <p>Use <strong>DFS</strong> to walk the graph. The problem: graphs have cycles, so as we clone we'll keep bumping into nodes we've already cloned. We need to remember them. So we keep a <strong>hashmap that maps each original node → its clone</strong>.</p>
+        <p>The rule: when we arrive at a node, <strong>if it's already in the map, return the existing clone</strong> (don't clone it again — that both prevents infinite loops <em>and</em> keeps shared neighbors shared). If it's new, create its clone, record it in the map, then recursively clone all its neighbors and attach them.</p>
+        <div class="callout good">
+          <strong>The hashmap plays two roles at once:</strong> it's our "visited set" (stops cycles) <em>and</em> our lookup table (old node → new node), so every reference points to the correct single copy.
+        </div>
+
+        <h4>Full solution</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="com"># Definition for a Node.</span>
+<span class="kw">class</span> <span class="fn">Node</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, val=<span class="num">0</span>, neighbors=<span class="kw">None</span>):
+        self.val = val
+        self.neighbors = neighbors <span class="kw">if</span> neighbors <span class="kw">else</span> []
+
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">cloneGraph</span>(self, node):
+        <span class="kw">if</span> <span class="kw">not</span> node:
+            <span class="kw">return</span> <span class="kw">None</span>
+        old_to_new = {}              <span class="com"># original node -> its clone</span>
+
+        <span class="kw">def</span> <span class="fn">dfs</span>(cur):
+            <span class="kw">if</span> cur <span class="kw">in</span> old_to_new:      <span class="com"># already cloned? return the clone</span>
+                <span class="kw">return</span> old_to_new[cur]
+            copy = <span class="fn">Node</span>(cur.val)      <span class="com"># make the new node</span>
+            old_to_new[cur] = copy   <span class="com"># record BEFORE recursing (breaks cycles)</span>
+            <span class="kw">for</span> nei <span class="kw">in</span> cur.neighbors:  <span class="com"># clone each neighbor...</span>
+                copy.neighbors.append(<span class="fn">dfs</span>(nei))  <span class="com"># ...and wire it up</span>
+            <span class="kw">return</span> copy
+
+        <span class="kw">return</span> <span class="fn">dfs</span>(node)</code></pre>
+        </div>
+
+        <h4>Every line, tied back to the intuition</h4>
+        <ul>
+          <li><code class="inline">if not node: return None</code> — empty graph edge case.</li>
+          <li><code class="inline">old_to_new = {}</code> — the hashmap that is <em>both</em> visited-tracker and old→new lookup.</li>
+          <li><code class="inline">def dfs(cur):</code> — returns the clone of <code class="inline">cur</code>, creating it if needed.</li>
+          <li><code class="inline">if cur in old_to_new: return old_to_new[cur]</code> — <strong>the crucial line.</strong> If we've seen this original before, hand back the clone we already made. This stops infinite recursion on cycles and ensures shared neighbors map to one shared clone.</li>
+          <li><code class="inline">copy = Node(cur.val)</code> — create the new node with the same value (but empty neighbors for now).</li>
+          <li><code class="inline">old_to_new[cur] = copy</code> — <strong>record the mapping BEFORE recursing.</strong> If we recursed first, a cycle back to <code class="inline">cur</code> would try to clone it again → infinite loop. Registering early means the guard above catches the loop.</li>
+          <li><code class="inline">for nei in cur.neighbors:</code> — go through the original's connections.</li>
+          <li><code class="inline">copy.neighbors.append(dfs(nei))</code> — clone each neighbor (or fetch its existing clone) and attach it to our copy. This rebuilds the exact same structure with new objects.</li>
+          <li><code class="inline">return copy</code> — hand back this node's finished clone.</li>
+          <li><code class="inline">return dfs(node)</code> — kick it off from the given node; get back the clone of the whole graph.</li>
+        </ul>
+
+        <h4>Complexity</h4>
+        <p><span class="pill time">Time: O(V + E)</span> We create each node once and walk each edge once while wiring up neighbors.</p>
+        <p><span class="pill space">Space: O(V)</span> The hashmap holds one entry per node, plus recursion depth up to V.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 8 -->
+    <section class="card" id="s8">
+      <div class="card-head">
+        <h2><span class="sec-num">8</span> Templates to Know Cold</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 5 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p>These three are the backbone of nearly every graph problem. Learn them until you can type them without thinking.</p>
+
+        <h4>1 · DFS recursive</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">def</span> <span class="fn">dfs</span>(node, adj, visited):
+    <span class="kw">if</span> node <span class="kw">in</span> visited:        <span class="com"># guard: don't revisit</span>
+        <span class="kw">return</span>
+    visited.add(node)          <span class="com"># mark on entry</span>
+    <span class="com"># --- do work with node here ---</span>
+    <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:       <span class="com"># explore each neighbor</span>
+        <span class="fn">dfs</span>(nei, adj, visited)    <span class="com"># dive deep first</span></code></pre>
+        </div>
+
+        <h4>2 · DFS iterative (explicit stack)</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">def</span> <span class="fn">dfs_iter</span>(start, adj):
+    visited = <span class="kw">set</span>()
+    stack = [start]              <span class="com"># LIFO frontier</span>
+    <span class="kw">while</span> stack:
+        node = stack.pop()       <span class="com"># newest first -> depth</span>
+        <span class="kw">if</span> node <span class="kw">in</span> visited:
+            <span class="kw">continue</span>
+        visited.add(node)
+        <span class="com"># --- do work with node here ---</span>
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:
+            <span class="kw">if</span> nei <span class="kw">not in</span> visited:
+                stack.append(nei)</code></pre>
+        </div>
+
+        <h4>3 · BFS (queue)</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
+
+<span class="kw">def</span> <span class="fn">bfs</span>(start, adj):
+    visited = {start}            <span class="com"># mark start right away</span>
+    queue = deque([start])       <span class="com"># FIFO frontier</span>
+    <span class="kw">while</span> queue:
+        node = queue.popleft()   <span class="com"># oldest first -> breadth</span>
+        <span class="com"># --- do work with node here ---</span>
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:
+            <span class="kw">if</span> nei <span class="kw">not in</span> visited:
+                visited.add(nei)     <span class="com"># mark when ENQUEUED</span>
+                queue.append(nei)</code></pre>
+        </div>
+
+        <div class="callout good">
+          <strong>Before you close this page:</strong> open a blank editor and write all three templates from memory — recursive DFS, iterative DFS, and BFS. If you can reproduce them cold, you can solve the vast majority of graph interview problems. The only differences to internalize: DFS uses a <strong>stack (LIFO)</strong>, BFS uses a <strong>queue (FIFO)</strong>, and BFS marks visited <strong>on enqueue</strong>.
+        </div>
+      </div>
+    </section>
+
+    <!-- SUMMARY -->
+    <section class="card summary-card" id="summary">
+      <div class="card-head">
+        <h2><span class="sec-num">★</span> Summary — Key Things to Remember</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 2 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="key-grid">
+          <div class="key-box"><h5>Graph = nodes + edges</h5><p>Directed (one-way) vs undirected (two-way). Weighted vs unweighted. That's the whole vocabulary.</p></div>
+          <div class="key-box"><h5>Use adjacency lists</h5><p>O(N+E) space, natural neighbor iteration. Matrices only for dense/tiny graphs.</p></div>
+          <div class="key-box"><h5>Always keep visited</h5><p>Mark on entry, check before entering. Without it, cycles loop forever.</p></div>
+          <div class="key-box"><h5>DFS = stack = deep</h5><p>LIFO. Recursion is a stack for free. Great for components, paths, cycles, flood fill.</p></div>
+          <div class="key-box"><h5>BFS = queue = wide</h5><p>FIFO. First arrival = shortest path in unweighted graphs. Mark visited on enqueue.</p></div>
+          <div class="key-box"><h5>Both are O(V + E)</h5><p>Each node and edge touched once. Space O(V) for the frontier/stack.</p></div>
+          <div class="key-box"><h5>Islands = components</h5><p>Grid is a graph. Scan; each new land cell +1 island, then DFS to sink it.</p></div>
+          <div class="key-box"><h5>Clone = DFS + hashmap</h5><p>old→new map is both visited-set and lookup. Record clone before recursing.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SELF TEST -->
+    <section class="card blue" id="selftest">
+      <div class="card-head">
+        <h2><span class="sec-num">✎</span> Self Test — Check Your Understanding</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="read-time">⏱ 6 min</span>
+          <span class="arrow">▼</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p>These test whether you <em>understand</em>, not whether you memorized. Think through each before revealing.</p>
+
+        <div class="qa">
+          <div class="qa-q">Q1. You run BFS and DFS on the same connected graph from the same start node. Will they always visit the same <em>set</em> of nodes? Will they visit them in the same <em>order</em>? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p><strong>Same set, different order.</strong> Both eventually reach every node reachable from the start, so the visited sets are identical. But BFS expands level by level (queue/FIFO) while DFS plunges deep (stack/LIFO), so the <em>order</em> differs. If a problem only asks "which nodes are reachable," either works; if it asks "shortest number of steps," you need BFS.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q2. In BFS, why do we mark a node visited when we <em>add</em> it to the queue rather than when we <em>remove</em> it? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>Because a node can be a neighbor of several nodes already in the queue. If you only mark on removal, the same node gets enqueued multiple times before it's ever processed — wasting work and potentially breaking shortest-path guarantees. Marking on enqueue ensures each node enters the queue <strong>exactly once</strong>.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q3. In the Number of Islands solution, why does <code class="inline">count += 1</code> run exactly once per island even though an island can have hundreds of land cells? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>Because the moment we find a new land cell and increment, we immediately call <code class="inline">dfs</code>, which sinks (marks visited) <em>every</em> cell of that island to <code class="inline">'0'</code>. By the time the outer scan reaches those other cells, they're already water, so the <code class="inline">if grid[r][c] == '1'</code> check fails and we don't increment again. One increment per connected component.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q4. In Clone Graph, what specifically breaks if you move <code class="inline">old_to_new[cur] = copy</code> to <em>after</em> the neighbor loop instead of before it? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>You get <strong>infinite recursion</strong> on any cycle. Suppose A and B are neighbors of each other. Cloning A recurses into B, which recurses back into A. If A wasn't registered in the map yet, the guard <code class="inline">if cur in old_to_new</code> misses, so A gets cloned again → into B again → forever. Registering the clone <em>before</em> recursing lets the guard catch the cycle.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q5. Someone hands you a graph with 1,000,000 nodes but only about 2,000,000 edges (very sparse). Which representation do you choose and roughly how much memory does the other one waste? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p><strong>Adjacency list</strong>, easily. It uses O(N + E) ≈ 3 million entries. An adjacency matrix uses O(N²) = 1,000,000² = <strong>one trillion cells</strong> — completely infeasible. The matrix only pays off when the graph is dense (E close to N²) or you need constant-time "is there an edge between i and j?" lookups.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q6. You need the minimum number of moves to solve a puzzle where each state connects to a few next states, all moves cost 1. DFS or BFS, and why? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p><strong>BFS.</strong> All edges cost the same (1 move), so this is a shortest-path-in-an-unweighted-graph problem. BFS explores states in increasing order of distance, so the first time it reaches the goal state it has used the fewest moves. DFS might find the goal via a long, winding path first and give a wrong (non-minimal) answer.</p></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<button id="toTop" title="Back to top">↑</button>
+
+<script>
+(function(){
+  var STORE_KEY = 'day5_graphs_progress';
+
+  // ---- collapsible cards ----
+  document.querySelectorAll('.card-head').forEach(function(h){
+    h.addEventListener('click', function(){
+      h.parentElement.classList.toggle('collapsed');
+    });
+  });
+
+  // ---- copy buttons ----
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var pre = btn.parentElement.querySelector('pre');
+      var text = pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      }).catch(function(){
+        // fallback
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(err){}
+        document.body.removeChild(ta);
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      });
+    });
+  });
+
+  // ---- self test reveal ----
+  document.querySelectorAll('.qa-q').forEach(function(q){
+    q.addEventListener('click', function(){
+      q.parentElement.classList.toggle('open');
+    });
+  });
+
+  // ---- progress checklist + localStorage ----
+  var boxes = document.querySelectorAll('#checkGrid input[type=checkbox]');
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ saved = {}; }
+
+  function refresh(){
+    var done = 0;
+    boxes.forEach(function(b){
+      if(b.checked){ done++; b.closest('.check-item').classList.add('done'); }
+      else { b.closest('.check-item').classList.remove('done'); }
+    });
+    var pct = Math.round(done / boxes.length * 100);
+    document.getElementById('pctText').textContent = done + ' of ' + boxes.length + ' sections complete';
+    document.getElementById('miniFill').style.width = pct + '%';
+  }
+
+  boxes.forEach(function(b){
+    var k = b.getAttribute('data-k');
+    if(saved[k]) b.checked = true;
+    b.addEventListener('change', function(){
+      saved[k] = b.checked;
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(saved)); } catch(e){}
+      refresh();
+    });
+  });
+  refresh();
+
+  // ---- top scroll progress bar ----
+  var pb = document.getElementById('progressBar');
+  var toTop = document.getElementById('toTop');
+  window.addEventListener('scroll', function(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    pb.style.width = (scrolled * 100) + '%';
+    toTop.style.display = h.scrollTop > 400 ? 'flex' : 'none';
+  });
+  toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  // ---- active sidebar link on scroll ----
+  var links = document.querySelectorAll('.sidebar-inner a');
+  var sections = [];
+  links.forEach(function(l){
+    var id = l.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if(el) sections.push({link:l, el:el});
+  });
+  window.addEventListener('scroll', function(){
+    var pos = window.scrollY + 120;
+    var current = null;
+    sections.forEach(function(s){
+      if(s.el.offsetTop <= pos) current = s;
+    });
+    links.forEach(function(l){ l.classList.remove('active'); });
+    if(current) current.link.classList.add('active');
+  });
+})();
+</script>
+</body>
+</html>

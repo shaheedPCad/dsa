@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 6 — Topological Sort &amp; Union Find</title>
+<style>
+  :root{
+    --bg:#0f1117;
+    --card:#1a1d2e;
+    --accent:#7CF29C;
+    --accent2:#4A9EFF;
+    --code-bg:#0d1117;
+    --text:#e6edf3;
+    --muted:#8B949E;
+    --kw:#FF7B72;
+    --str:#A5D6FF;
+    --com:#8B949E;
+    --fn:#D2A8FF;
+    --border:#2a2f45;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,sans-serif;
+    line-height:1.65;
+    font-size:16px;
+  }
+  #progressBar{
+    position:fixed;top:0;left:0;height:4px;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    z-index:1000;transition:width .1s ease-out;
+  }
+  .layout{display:flex;max-width:1200px;margin:0 auto;gap:24px;padding:24px 20px 80px;}
+  aside{width:260px;flex-shrink:0;}
+  .sidebar-inner{
+    position:sticky;top:20px;background:var(--card);border:1px solid var(--border);
+    border-radius:14px;padding:18px 16px;max-height:calc(100vh - 40px);overflow-y:auto;
+  }
+  .sidebar-inner h3{margin:0 0 12px;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .sidebar-inner a{
+    display:block;color:var(--text);text-decoration:none;padding:7px 10px;border-radius:8px;
+    font-size:.88rem;border-left:3px solid transparent;transition:all .15s;
+  }
+  .sidebar-inner a:hover{background:#232740;color:var(--accent);}
+  .sidebar-inner a.active{background:#232740;border-left-color:var(--accent);color:var(--accent);}
+  main{flex:1;min-width:0;}
+  header.page-head{margin-bottom:24px;}
+  header.page-head h1{
+    font-size:2rem;margin:0 0 6px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  header.page-head p{color:var(--muted);margin:0;}
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:22px;
+    box-shadow:0 4px 18px rgba(0,0,0,.28);border-left:4px solid var(--accent);overflow:hidden;
+  }
+  .card.blue{border-left-color:var(--accent2);}
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;cursor:pointer;user-select:none;gap:12px;}
+  .card-head h2{margin:0;font-size:1.22rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .sec-num{background:#232740;color:var(--accent);border-radius:8px;padding:2px 9px;font-size:.85rem;font-weight:700;}
+  .blue .sec-num{color:var(--accent2);}
+  .read-time{font-size:.72rem;color:var(--muted);font-weight:400;background:#232740;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .arrow{font-size:1rem;color:var(--muted);transition:transform .25s;flex-shrink:0;}
+  .card.collapsed .arrow{transform:rotate(-90deg);}
+  .card-body{padding:0 22px 22px;}
+  .card.collapsed .card-body{display:none;}
+  p{margin:12px 0;}
+  h4{color:var(--accent2);margin:22px 0 8px;font-size:1.02rem;}
+  .blue h4{color:var(--accent);}
+  strong{color:#fff;}
+  code.inline{background:var(--code-bg);padding:2px 6px;border-radius:5px;font-family:"Courier New",monospace;color:var(--str);font-size:.9em;}
+  ul,ol{padding-left:22px;}
+  li{margin:6px 0;}
+  .callout{background:#20233a;border-radius:10px;padding:14px 16px;margin:16px 0;border-left:3px solid var(--accent2);}
+  .callout.warn{border-left-color:#FF7B72;}
+  .callout.good{border-left-color:var(--accent);}
+  .callout strong{color:var(--accent2);}
+  .code-wrap{position:relative;margin:16px 0;}
+  .copy-btn{
+    position:absolute;top:10px;right:10px;background:#21262d;color:var(--text);border:1px solid var(--border);
+    border-radius:6px;padding:5px 12px;font-size:.75rem;cursor:pointer;font-family:system-ui,sans-serif;transition:all .15s;z-index:2;
+  }
+  .copy-btn:hover{background:var(--accent);color:#0d1117;border-color:var(--accent);}
+  .copy-btn.copied{background:var(--accent);color:#0d1117;}
+  pre{
+    background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:18px;overflow-x:auto;margin:0;
+    font-family:"Courier New",monospace;font-size:.86rem;line-height:1.55;
+  }
+  pre code{font-family:"Courier New",monospace;color:var(--text);white-space:pre;}
+  .kw{color:var(--kw);}
+  .str{color:var(--str);}
+  .com{color:var(--com);font-style:italic;}
+  .fn{color:var(--fn);}
+  .num{color:#79C0FF;}
+  .pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;margin:4px 6px 4px 0;font-family:"Courier New",monospace;}
+  .pill.time{background:rgba(124,242,156,.15);color:var(--accent);border:1px solid rgba(124,242,156,.35);}
+  .pill.space{background:rgba(74,158,255,.15);color:var(--accent2);border:1px solid rgba(74,158,255,.35);}
+  .checklist{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:14px;padding:20px 22px;margin-bottom:22px;}
+  .checklist h2{margin:0 0 6px;font-size:1.2rem;}
+  .checklist .pct{color:var(--muted);font-size:.85rem;margin-bottom:14px;}
+  .check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}
+  .check-item{display:flex;align-items:center;gap:10px;background:#20233a;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:.88rem;transition:background .15s;}
+  .check-item:hover{background:#262a45;}
+  .check-item input{appearance:none;width:18px;height:18px;border:2px solid var(--muted);border-radius:5px;cursor:pointer;flex-shrink:0;position:relative;transition:all .15s;}
+  .check-item input:checked{background:var(--accent);border-color:var(--accent);}
+  .check-item input:checked::after{content:"✓";position:absolute;color:#0d1117;font-size:12px;font-weight:900;top:-2px;left:2px;}
+  .check-item.done span{text-decoration:line-through;color:var(--muted);}
+  .mini-bar{height:8px;background:#20233a;border-radius:20px;overflow:hidden;margin-bottom:14px;}
+  .mini-bar>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;}
+  /* directed graph diagram */
+  .dg{position:relative;height:250px;margin:20px auto;max-width:480px;background:#12152080;border-radius:12px;border:1px solid var(--border);}
+  .dnode{position:absolute;width:52px;height:52px;border-radius:50%;background:var(--card);border:3px solid var(--accent2);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent2);z-index:2;font-size:.82rem;text-align:center;line-height:1.05;}
+  .darrow{position:absolute;height:3px;background:var(--muted);z-index:1;transform-origin:0 50%;border-radius:2px;}
+  .darrow::after{content:"";position:absolute;right:-2px;top:-4px;border-left:10px solid var(--muted);border-top:5px solid transparent;border-bottom:5px solid transparent;}
+  /* generic node chips + trace */
+  .trace{display:flex;flex-direction:column;gap:10px;margin:16px 0;}
+  .trace-step{display:flex;align-items:flex-start;gap:12px;background:#20233a;padding:12px 14px;border-radius:10px;border-left:3px solid var(--accent);flex-wrap:wrap;}
+  .trace-step .badge{background:var(--accent);color:#0d1117;font-weight:700;border-radius:6px;padding:3px 9px;font-size:.8rem;flex-shrink:0;}
+  .blue .trace-step{border-left-color:var(--accent2);}
+  .blue .trace-step .badge{background:var(--accent2);}
+  .nodechip{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 8px;border-radius:8px;background:var(--card);border:2px solid var(--border);font-family:"Courier New",monospace;font-weight:700;margin:2px;}
+  .nodechip.visited{border-color:var(--accent);color:var(--accent);}
+  .nodechip.current{border-color:var(--accent2);color:var(--accent2);background:#1e2a45;}
+  .nodechip.inq{border-color:#FFD866;color:#FFD866;}
+  .arrow-r{color:var(--muted);font-size:1.1rem;}
+  .queue-box{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#12152080;padding:10px;border-radius:8px;margin-top:6px;}
+  .queue-label{font-size:.75rem;color:var(--muted);font-family:"Courier New",monospace;}
+  .indeg-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .indeg{display:flex;flex-direction:column;align-items:center;background:var(--card);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-family:"Courier New",monospace;min-width:44px;}
+  .indeg .n{font-weight:700;color:var(--text);}
+  .indeg .v{font-size:.75rem;color:var(--accent);}
+  .indeg.zero{border-color:var(--accent);}
+  /* union find tree diagram */
+  .uf-wrap{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;margin:20px 0;}
+  .uf-tree{background:#12152080;border:1px solid var(--border);border-radius:12px;padding:16px 20px;text-align:center;min-width:200px;}
+  .uf-tree h5{margin:0 0 14px;color:var(--muted);font-size:.85rem;font-weight:600;}
+  .uf-level{display:flex;justify-content:center;gap:14px;margin:6px 0;position:relative;}
+  .ufn{width:40px;height:40px;border-radius:50%;background:var(--card);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-family:"Courier New",monospace;}
+  .ufn.root{border-color:#FFD866;color:#FFD866;}
+  .uf-connector{color:var(--muted);font-size:1.2rem;line-height:1;}
+  .qa{background:#20233a;border-radius:10px;margin:12px 0;overflow:hidden;border:1px solid var(--border);}
+  .qa-q{padding:14px 16px;cursor:pointer;font-weight:600;display:flex;justify-content:space-between;gap:12px;align-items:center;}
+  .qa-q:hover{background:#262a45;}
+  .qa-q .q-ar{color:var(--accent2);transition:transform .2s;}
+  .qa.open .q-ar{transform:rotate(90deg);}
+  .qa-a{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s;color:var(--muted);}
+  .qa.open .qa-a{padding:0 16px 16px;max-height:700px;color:var(--text);}
+  .qa-a strong{color:var(--accent);}
+  #toTop{position:fixed;bottom:26px;right:26px;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#0d1117;border:none;font-size:1.3rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:900;font-weight:900;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:transform .15s;}
+  #toTop:hover{transform:translateY(-3px);}
+  .summary-card{border-left-color:#FFD866;}
+  .summary-card .sec-num{color:#FFD866;}
+  .key-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:8px;}
+  .key-box{background:#20233a;border-radius:10px;padding:14px;border-top:3px solid var(--accent);}
+  .key-box h5{margin:0 0 6px;color:var(--accent);font-size:.95rem;}
+  .key-box p{margin:0;font-size:.86rem;color:var(--muted);}
+  @media(max-width:860px){
+    aside{display:none;}
+    .layout{padding:16px 14px 80px;}
+    header.page-head h1{font-size:1.5rem;}
+  }
+</style>
+</head>
+<body>
+<div id="progressBar"></div>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-inner">
+      <h3>On this page</h3>
+      <a href="#s1">1 · Directed Graphs &amp; DAGs</a>
+      <a href="#s2">2 · Topological Sort</a>
+      <a href="#s3">3 · LC 207 Course Schedule</a>
+      <a href="#s4">4 · LC 210 Course Schedule II</a>
+      <a href="#s5">5 · What is Union Find</a>
+      <a href="#s6">6 · Union Find Template</a>
+      <a href="#s7">7 · LC 721 Accounts Merge</a>
+      <a href="#s8">8 · LC 1258 Synonymous Sentences</a>
+      <a href="#s9">9 · Templates</a>
+      <a href="#summary">★ Summary</a>
+      <a href="#selftest">✎ Self Test</a>
+    </div>
+  </aside>
+
+  <main>
+    <header class="page-head">
+      <h1>Day 6 — Topological Sort &amp; Union Find</h1>
+      <p>Ordering with dependencies, and grouping with connections. Read top to bottom.</p>
+    </header>
+
+    <!-- CHECKLIST -->
+    <div class="checklist" id="checklist">
+      <h2>📋 Your Progress</h2>
+      <div class="pct" id="pctText">0 of 9 sections complete</div>
+      <div class="mini-bar"><div id="miniFill"></div></div>
+      <div class="check-grid" id="checkGrid">
+        <label class="check-item"><input type="checkbox" data-k="c1"><span>1 · Directed Graphs &amp; DAGs</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c2"><span>2 · Topological Sort</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c3"><span>3 · Course Schedule</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c4"><span>4 · Course Schedule II</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c5"><span>5 · What is Union Find</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c6"><span>6 · Union Find Template</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c7"><span>7 · Accounts Merge</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c8"><span>8 · Synonymous Sentences</span></label>
+        <label class="check-item"><input type="checkbox" data-k="c9"><span>9 · Templates</span></label>
+      </div>
+    </div>
+
+    <!-- SECTION 1 -->
+    <section class="card blue" id="s1">
+      <div class="card-head">
+        <h2><span class="sec-num">1</span> Directed Graphs &amp; DAGs</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 5 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <p>A <strong>directed graph</strong> is a graph where edges have a direction — an arrow. Edge A → B means "you can go from A to B," but <em>not</em> necessarily from B to A. Think one-way streets.</p>
+
+        <h4>What is a cycle?</h4>
+        <p>A <strong>cycle</strong> is a path that leads back to where it started by following the arrows: A → B → C → A. You can go around forever. Cycles are the enemy of ordering, because if A must come before B, B before C, and C before A, then… there's no valid starting point. It's a contradiction.</p>
+
+        <h4>What is a DAG?</h4>
+        <p>A <strong>DAG</strong> is a <strong>D</strong>irected <strong>A</strong>cyclic <strong>G</strong>raph — a directed graph with <em>no cycles</em>. Because nothing loops back on itself, you can always find a consistent order to process the nodes. <strong>This is exactly why DAGs matter for topological sort: topological sort only exists on a DAG.</strong></p>
+
+        <h4>Analogy: university course prerequisites</h4>
+        <p>"Calculus I" must come before "Calculus II," which comes before "Calculus III." Draw an arrow from each course to the course it unlocks. In a sane curriculum there are no cycles — you'd never have a rule that says "you need C to take A, and A to take C." That prerequisite graph is a DAG, and a topological sort of it is simply a valid order to take all the classes.</p>
+
+        <div class="dg">
+          <div class="dnode" style="top:20px;left:30px;">Calc I</div>
+          <div class="dnode" style="top:20px;left:210px;">Calc II</div>
+          <div class="dnode" style="top:20px;left:390px;">Calc III</div>
+          <div class="dnode" style="top:150px;left:210px;">Physics</div>
+          <!-- Calc I -> Calc II -->
+          <div class="darrow" style="top:46px;left:82px;width:128px;"></div>
+          <!-- Calc II -> Calc III -->
+          <div class="darrow" style="top:46px;left:262px;width:128px;"></div>
+          <!-- Calc I -> Physics -->
+          <div class="darrow" style="top:60px;left:70px;width:185px;transform:rotate(28deg);"></div>
+        </div>
+        <p style="text-align:center;color:var(--muted);font-size:.85rem;">Arrows point from prerequisite → course it unlocks. No cycles = it's a DAG.</p>
+
+        <div class="callout good">
+          <strong>Remember:</strong> Cycle in a directed graph = no valid ordering exists. DAG = ordering always exists. Half of these problems reduce to "is this graph a DAG?"
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2 -->
+    <section class="card" id="s2">
+      <div class="card-head">
+        <h2><span class="sec-num">2</span> Topological Sort</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 12 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <p>A <strong>topological sort</strong> is a linear ordering of a directed graph's nodes such that for every edge A → B, A comes <em>before</em> B in the ordering. It's "an order that respects all the dependencies."</p>
+
+        <h4>Analogy: getting dressed</h4>
+        <p>You must put on socks before shoes, and underwear before pants. You physically <em>cannot</em> put shoes on before socks. There are many valid orders (socks → underwear → pants → shirt → shoes is fine; so is underwear → socks → shirt → pants → shoes), but all of them keep socks before shoes. A topological sort produces one such valid order.</p>
+
+        <div class="callout warn">
+          <strong>Only works on a DAG.</strong> If there's a cycle — say A depends on B and B depends on A — there is <em>no</em> valid order, and a correct topological-sort algorithm will detect that and report failure (it produces fewer nodes than exist).
+        </div>
+
+        <h4>Kahn's Algorithm (BFS-based)</h4>
+        <p>The core idea is <strong>in-degree</strong>: a node's in-degree is the number of arrows pointing <em>into</em> it — i.e., how many prerequisites it still has. The algorithm:</p>
+        <ol>
+          <li>Compute every node's in-degree.</li>
+          <li>Start with all nodes whose in-degree is <strong>0</strong> (no prerequisites) — put them in a queue.</li>
+          <li>Pop a node, add it to the result order. For each of its neighbors, <strong>decrement their in-degree by 1</strong> (we just "finished" one of their prerequisites).</li>
+          <li>If a neighbor's in-degree hits <strong>0</strong>, all its prerequisites are done — add it to the queue.</li>
+          <li>Repeat until the queue is empty. If the result contains every node, success. If not, there was a cycle.</li>
+        </ol>
+
+        <h4>Visual step by step</h4>
+        <p>Graph: 0 → 2, 1 → 2, 2 → 3. (Node 3 depends on 2; node 2 depends on 0 and 1.) In-degrees start at: 0→0, 1→0, 2→2, 3→1.</p>
+        <div class="trace">
+          <div class="trace-step"><span class="badge">Start</span><div>In-degrees below. Zeros go in the queue.
+            <div class="indeg-row"><div class="indeg zero"><span class="n">0</span><span class="v">deg 0</span></div><div class="indeg zero"><span class="n">1</span><span class="v">deg 0</span></div><div class="indeg"><span class="n">2</span><span class="v">deg 2</span></div><div class="indeg"><span class="n">3</span><span class="v">deg 1</span></div></div>
+            <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">0</span><span class="nodechip inq">1</span></div>
+          </div></div>
+          <div class="trace-step"><span class="badge">1</span><div>Pop <span class="nodechip current">0</span> → result. It points to 2, so 2's in-degree 2 → 1 (not zero yet).
+            <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">1</span> &nbsp; <span class="queue-label">result:</span><span class="nodechip visited">0</span></div>
+          </div></div>
+          <div class="trace-step"><span class="badge">2</span><div>Pop <span class="nodechip current">1</span> → result. It points to 2, so 2's in-degree 1 → 0. Add 2 to queue.
+            <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">2</span> &nbsp; <span class="queue-label">result:</span><span class="nodechip visited">0</span><span class="nodechip visited">1</span></div>
+          </div></div>
+          <div class="trace-step"><span class="badge">3</span><div>Pop <span class="nodechip current">2</span> → result. It points to 3, so 3's in-degree 1 → 0. Add 3 to queue.
+            <div class="queue-box"><span class="queue-label">queue:</span><span class="nodechip inq">3</span> &nbsp; <span class="queue-label">result:</span><span class="nodechip visited">0</span><span class="nodechip visited">1</span><span class="nodechip visited">2</span></div>
+          </div></div>
+          <div class="trace-step"><span class="badge">4</span><div>Pop <span class="nodechip current">3</span> → result. No neighbors. Queue empty.
+            <div class="queue-box"><span class="queue-label">result:</span><span class="nodechip visited">0</span><span class="nodechip visited">1</span><span class="nodechip visited">2</span><span class="nodechip visited">3</span></div>
+          </div></div>
+          <div class="trace-step"><span class="badge">✓</span><div>4 of 4 nodes ordered → valid topological sort: <strong>0, 1, 2, 3</strong>. (0 and 1 could swap.)</div></div>
+        </div>
+
+        <h4>Kahn's algorithm code</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque, defaultdict
+
+<span class="kw">def</span> <span class="fn">topo_kahn</span>(n, edges):
+    adj = defaultdict(list)
+    indeg = [<span class="num">0</span>] * n              <span class="com"># in-degree of every node</span>
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:            <span class="com"># edge u -> v</span>
+        adj[u].append(v)             <span class="com"># u unlocks v</span>
+        indeg[v] += <span class="num">1</span>              <span class="com"># v gains one prerequisite</span>
+
+    queue = deque([i <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n) <span class="kw">if</span> indeg[i] == <span class="num">0</span>])  <span class="com"># start nodes</span>
+    order = []
+    <span class="kw">while</span> queue:
+        node = queue.popleft()       <span class="com"># a node with no remaining prereqs</span>
+        order.append(node)           <span class="com"># commit it to the order</span>
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:         <span class="com"># for everything it unlocks...</span>
+            indeg[nei] -= <span class="num">1</span>         <span class="com"># ...one prereq done</span>
+            <span class="kw">if</span> indeg[nei] == <span class="num">0</span>:      <span class="com"># all prereqs done?</span>
+                queue.append(nei)    <span class="com"># it's now ready</span>
+
+    <span class="kw">return</span> order <span class="kw">if</span> <span class="fn">len</span>(order) == n <span class="kw">else</span> []  <span class="com"># [] means cycle</span></code></pre>
+        </div>
+        <ul>
+          <li><code class="inline">indeg = [0]*n</code> — one counter per node; how many arrows point in.</li>
+          <li><code class="inline">adj[u].append(v)</code> and <code class="inline">indeg[v] += 1</code> — for edge u → v, record the neighbor and bump v's in-degree.</li>
+          <li><code class="inline">queue = deque([... if indeg[i]==0])</code> — seed the queue with every node that has no prerequisites. These are our valid starting points.</li>
+          <li><code class="inline">node = queue.popleft()</code> — take a node with zero remaining prerequisites; it's safe to place next.</li>
+          <li><code class="inline">order.append(node)</code> — commit it to the output order.</li>
+          <li><code class="inline">indeg[nei] -= 1</code> — we just finished <code class="inline">node</code>, which was a prerequisite for <code class="inline">nei</code>, so lower its count.</li>
+          <li><code class="inline">if indeg[nei] == 0: queue.append(nei)</code> — if that was its last prerequisite, it's now ready to be placed.</li>
+          <li><code class="inline">return order if len(order)==n else []</code> — <strong>the cycle check.</strong> If a cycle exists, those nodes never reach in-degree 0, never enter the queue, and are missing from <code class="inline">order</code>. A short list = cycle = no valid ordering.</li>
+        </ul>
+        <p><span class="pill time">Time: O(V + E)</span><span class="pill space">Space: O(V + E)</span></p>
+
+        <h4>DFS-based topological sort (post-order)</h4>
+        <p>The other approach uses DFS. The key insight: <strong>a node should appear in the ordering only after everything it depends on is placed</strong> — so we add a node to our result <em>after</em> we've fully explored all of its outgoing edges (its "descendants"). That's <strong>post-order</strong>. Because we build the list bottom-up, we <strong>reverse it at the end</strong>.</p>
+        <div class="callout">
+          <strong>Why add AFTER visiting all neighbors?</strong> If node A → B, we must finish B (and everything B leads to) first. By appending A only after the recursion into B returns, B lands in the list before A. Then reversing makes A come before B — exactly the dependency order we want.
+        </div>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">def</span> <span class="fn">topo_dfs</span>(n, edges):
+    adj = defaultdict(list)
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:
+        adj[u].append(v)
+
+    visited = [<span class="num">0</span>] * n     <span class="com"># 0=unseen, 1=in progress, 2=done</span>
+    order = []
+    has_cycle = [<span class="kw">False</span>]
+
+    <span class="kw">def</span> <span class="fn">dfs</span>(node):
+        <span class="kw">if</span> visited[node] == <span class="num">1</span>:      <span class="com"># hit a node on the current path -> cycle</span>
+            has_cycle[<span class="num">0</span>] = <span class="kw">True</span>
+            <span class="kw">return</span>
+        <span class="kw">if</span> visited[node] == <span class="num">2</span>:      <span class="com"># already finished -> skip</span>
+            <span class="kw">return</span>
+        visited[node] = <span class="num">1</span>          <span class="com"># mark IN PROGRESS</span>
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:
+            <span class="fn">dfs</span>(nei)               <span class="com"># finish all descendants first</span>
+        visited[node] = <span class="num">2</span>          <span class="com"># mark DONE</span>
+        order.append(node)          <span class="com"># POST-ORDER: add after neighbors</span>
+
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        <span class="kw">if</span> visited[i] == <span class="num">0</span>:
+            <span class="fn">dfs</span>(i)
+    <span class="kw">if</span> has_cycle[<span class="num">0</span>]:
+        <span class="kw">return</span> []
+    <span class="kw">return</span> order[::-<span class="num">1</span>]         <span class="com"># reverse post-order = topo order</span></code></pre>
+        </div>
+        <ul>
+          <li><code class="inline">visited</code> uses three states: <strong>0 unseen, 1 in-progress, 2 done</strong>. The "in-progress" state is how DFS detects cycles.</li>
+          <li><code class="inline">if visited[node]==1: has_cycle=True</code> — if we reach a node that's still on our current recursion path, we've looped back → cycle → no valid order.</li>
+          <li><code class="inline">if visited[node]==2: return</code> — fully processed already; nothing to do.</li>
+          <li><code class="inline">visited[node]=1</code> — mark that this node is on the active path.</li>
+          <li><code class="inline">for nei in adj[node]: dfs(nei)</code> — recurse into all descendants <em>first</em>.</li>
+          <li><code class="inline">visited[node]=2</code> then <code class="inline">order.append(node)</code> — <strong>post-order append.</strong> The node is recorded only after all its dependents are done, so it sits before them once reversed.</li>
+          <li><code class="inline">return order[::-1]</code> — reverse to turn "deepest-first" into "dependency-first."</li>
+        </ul>
+        <p><span class="pill time">Time: O(V + E)</span><span class="pill space">Space: O(V + E)</span></p>
+      </div>
+    </section>
+
+    <!-- SECTION 3 -->
+    <section class="card blue" id="s3">
+      <div class="card-head">
+        <h2><span class="sec-num">3</span> LC 207 — Course Schedule</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 7 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <h4>The problem</h4>
+        <p>There are <code class="inline">numCourses</code> courses labeled <code class="inline">0</code> to <code class="inline">numCourses-1</code>. You're given <code class="inline">prerequisites</code> where <code class="inline">[a, b]</code> means "to take course a, you must first take course b." Return <code class="inline">True</code> if you can finish all courses, else <code class="inline">False</code>.</p>
+
+        <h4>The reframe</h4>
+        <p>Each course is a node; each prerequisite <code class="inline">[a, b]</code> is a directed edge b → a ("b unlocks a"). <strong>"Can I finish all courses?" is exactly "Is this graph a DAG (no cycle)?"</strong> If there's a cycle — course X needs Y, Y needs X — you can never start, so return <code class="inline">False</code>. No cycle → return <code class="inline">True</code>.</p>
+
+        <h4>Intuition — Kahn's algorithm</h4>
+        <p>Run Kahn's topological sort and just <strong>count how many courses we manage to finish</strong> (pop from the queue). If a cycle exists, the nodes in that cycle never hit in-degree 0, so we finish fewer than <code class="inline">numCourses</code>. If we finish all of them, there was no cycle.</p>
+
+        <h4>Full solution</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque, defaultdict
+
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">canFinish</span>(self, numCourses, prerequisites):
+        adj = defaultdict(list)
+        indeg = [<span class="num">0</span>] * numCourses
+        <span class="kw">for</span> a, b <span class="kw">in</span> prerequisites:   <span class="com"># must take b before a</span>
+            adj[b].append(a)             <span class="com"># edge b -> a</span>
+            indeg[a] += <span class="num">1</span>              <span class="com"># a has one more prereq</span>
+
+        queue = deque([c <span class="kw">for</span> c <span class="kw">in</span> <span class="fn">range</span>(numCourses) <span class="kw">if</span> indeg[c] == <span class="num">0</span>])
+        finished = <span class="num">0</span>                   <span class="com"># how many courses we completed</span>
+
+        <span class="kw">while</span> queue:
+            course = queue.popleft()     <span class="com"># no remaining prereqs</span>
+            finished += <span class="num">1</span>            <span class="com"># take it</span>
+            <span class="kw">for</span> nxt <span class="kw">in</span> adj[course]:      <span class="com"># courses it unlocks</span>
+                indeg[nxt] -= <span class="num">1</span>
+                <span class="kw">if</span> indeg[nxt] == <span class="num">0</span>:
+                    queue.append(nxt)
+
+        <span class="kw">return</span> finished == numCourses    <span class="com"># all done -> no cycle</span></code></pre>
+        </div>
+
+        <h4>Every line, tied to the intuition</h4>
+        <ul>
+          <li><code class="inline">adj[b].append(a)</code> / <code class="inline">indeg[a] += 1</code> — build the graph: <code class="inline">b</code> unlocks <code class="inline">a</code>, and <code class="inline">a</code> gains a prerequisite. In-degree = "prereqs left to satisfy."</li>
+          <li><code class="inline">queue = deque([... indeg[c]==0])</code> — courses with no prerequisites; you can take these right away.</li>
+          <li><code class="inline">finished = 0</code> — our counter, standing in for the cycle test.</li>
+          <li><code class="inline">course = queue.popleft()</code> — a course whose prerequisites are all met.</li>
+          <li><code class="inline">finished += 1</code> — mark it complete.</li>
+          <li><code class="inline">indeg[nxt] -= 1</code> — completing <code class="inline">course</code> removes a prerequisite from everything it unlocks.</li>
+          <li><code class="inline">if indeg[nxt]==0: queue.append(nxt)</code> — a course whose last prerequisite just cleared becomes takeable.</li>
+          <li><code class="inline">return finished == numCourses</code> — <strong>the answer.</strong> If a cycle existed, its courses never reached in-degree 0, so <code class="inline">finished</code> falls short → <code class="inline">False</code>. Finishing all means the graph is a DAG → <code class="inline">True</code>.</li>
+        </ul>
+
+        <h4>Complexity</h4>
+        <p><span class="pill time">Time: O(V + E)</span> V = numCourses, E = number of prerequisites. Each node enqueued once, each edge relaxed once.</p>
+        <p><span class="pill space">Space: O(V + E)</span> Adjacency list plus in-degree array and queue.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 4 -->
+    <section class="card" id="s4">
+      <div class="card-head">
+        <h2><span class="sec-num">4</span> LC 210 — Course Schedule II</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 6 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <h4>How it differs from 207</h4>
+        <p>Problem 207 asked a yes/no question: <em>can</em> you finish? Problem 210 asks for the <strong>actual order</strong> — return any valid ordering of courses to take, or an empty array <code class="inline">[]</code> if it's impossible (a cycle exists).</p>
+
+        <h4>Intuition</h4>
+        <p>It's the same Kahn's algorithm — but instead of only <em>counting</em> finished courses, we <strong>record each course in an <code class="inline">order</code> list as we pop it</strong>. The order in which nodes leave the queue <em>is</em> a valid topological order. At the end, if the order contains every course, return it; otherwise a cycle blocked us, so return <code class="inline">[]</code>.</p>
+
+        <h4>Full solution</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque, defaultdict
+
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">findOrder</span>(self, numCourses, prerequisites):
+        adj = defaultdict(list)
+        indeg = [<span class="num">0</span>] * numCourses
+        <span class="kw">for</span> a, b <span class="kw">in</span> prerequisites:   <span class="com"># take b before a</span>
+            adj[b].append(a)             <span class="com"># edge b -> a</span>
+            indeg[a] += <span class="num">1</span>
+
+        queue = deque([c <span class="kw">for</span> c <span class="kw">in</span> <span class="fn">range</span>(numCourses) <span class="kw">if</span> indeg[c] == <span class="num">0</span>])
+        order = []                       <span class="com"># the actual sequence</span>
+
+        <span class="kw">while</span> queue:
+            course = queue.popleft()
+            order.append(course)         <span class="com"># record it in the order</span>
+            <span class="kw">for</span> nxt <span class="kw">in</span> adj[course]:
+                indeg[nxt] -= <span class="num">1</span>
+                <span class="kw">if</span> indeg[nxt] == <span class="num">0</span>:
+                    queue.append(nxt)
+
+        <span class="kw">return</span> order <span class="kw">if</span> <span class="fn">len</span>(order) == numCourses <span class="kw">else</span> []</code></pre>
+        </div>
+
+        <h4>Every line, tied to the intuition</h4>
+        <ul>
+          <li>Graph building and the queue seed are <strong>identical to 207</strong> — same DAG, same in-degree bookkeeping.</li>
+          <li><code class="inline">order = []</code> — instead of an integer counter, we keep the actual list of courses.</li>
+          <li><code class="inline">order.append(course)</code> — <strong>the one meaningful change.</strong> Each time a course becomes takeable (all prereqs cleared) and we pop it, we append it. The pop-order respects every prerequisite, so it's a valid topological sort.</li>
+          <li><code class="inline">indeg[nxt] -= 1</code> / <code class="inline">if indeg[nxt]==0: queue.append(nxt)</code> — same dependency-clearing logic as before.</li>
+          <li><code class="inline">return order if len(order)==numCourses else []</code> — if we placed every course, the order is complete and valid; a shortfall means a cycle, so return <code class="inline">[]</code> per the problem spec.</li>
+        </ul>
+
+        <div class="callout good">
+          <strong>Takeaway:</strong> 207 and 210 are the <em>same algorithm</em>. 207 returns <code class="inline">count == n</code>; 210 returns the list itself. Learn one, you've learned both.
+        </div>
+
+        <h4>Complexity</h4>
+        <p><span class="pill time">Time: O(V + E)</span><span class="pill space">Space: O(V + E)</span> Same as 207 — the output list doesn't change the asymptotics.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 5 -->
+    <section class="card blue" id="s5">
+      <div class="card-head">
+        <h2><span class="sec-num">5</span> What is Union Find</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 9 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <p><strong>Union Find</strong> (also called <strong>Disjoint Set Union</strong>, or DSU) is a data structure for tracking <em>which group each element belongs to</em>, when groups can merge over time.</p>
+
+        <h4>Analogy: friend groups</h4>
+        <p>If A and B are friends, they're in one group. If B and C are friends, then C joins that group too — now A, B, and C are all one group, even though A and C never met directly. Union Find answers "are these two people in the same group?" and lets you "merge two groups" efficiently.</p>
+
+        <h4>Two operations</h4>
+        <ul>
+          <li><strong>Find(x)</strong> — return a representative ("leader"/"root") of x's group. Two elements are in the same group <em>iff</em> they have the same root.</li>
+          <li><strong>Union(x, y)</strong> — merge the groups containing x and y into one.</li>
+        </ul>
+
+        <h4>Naive approach</h4>
+        <p>Keep a <code class="inline">parent</code> array where each element points to a parent. Follow parents upward until you reach a node that points to itself — that's the root. To union, make one root the parent of the other. Simple, but if you're careless the tree can become a long chain (A→B→C→D→…), so <code class="inline">find</code> degrades to O(N). Two optimizations fix this.</p>
+
+        <h4>Optimization 1: Path compression</h4>
+        <p>When you call <code class="inline">find(x)</code> and walk up to the root, you already know the root — so <strong>re-point every node along the way directly to the root</strong>. The tree gets flatter each time. Next time those nodes are looked up, they're one hop from the root.</p>
+
+        <div class="uf-wrap">
+          <div class="uf-tree">
+            <h5>BEFORE find(4) — a tall chain</h5>
+            <div class="uf-level"><div class="ufn root">1</div></div>
+            <div class="uf-connector">│</div>
+            <div class="uf-level"><div class="ufn">2</div></div>
+            <div class="uf-connector">│</div>
+            <div class="uf-level"><div class="ufn">3</div></div>
+            <div class="uf-connector">│</div>
+            <div class="uf-level"><div class="ufn">4</div></div>
+          </div>
+          <div class="uf-tree">
+            <h5>AFTER find(4) — flattened</h5>
+            <div class="uf-level"><div class="ufn root">1</div></div>
+            <div class="uf-connector">╱ │ ╲</div>
+            <div class="uf-level"><div class="ufn">2</div><div class="ufn">3</div><div class="ufn">4</div></div>
+          </div>
+        </div>
+        <p style="text-align:center;color:var(--muted);font-size:.85rem;">Path compression: after finding 4's root (1), nodes 2, 3, and 4 all point straight at 1. Future lookups are O(1)-ish.</p>
+
+        <h4>Optimization 2: Union by rank</h4>
+        <p><strong>Rank</strong> is roughly the height of a tree. When merging two trees, <strong>always attach the shorter tree under the taller one's root.</strong> This keeps the combined tree as shallow as possible. If you did the opposite — hang the tall tree under the short one — you'd make it taller and slower.</p>
+
+        <div class="callout good">
+          <strong>Together these are magic:</strong> path compression + union by rank make <code class="inline">find</code> and <code class="inline">union</code> run in <strong>almost O(1)</strong> — technically O(α(N)), where α is the inverse Ackermann function, which is ≤ 4 for any input you'll ever see. Practically constant.
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6 -->
+    <section class="card" id="s6">
+      <div class="card-head">
+        <h2><span class="sec-num">6</span> Union Find Code Template</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 7 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <p>This is the class to memorize. It has both optimizations built in.</p>
+
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">class</span> <span class="fn">UnionFind</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, n):
+        self.parent = <span class="fn">list</span>(<span class="fn">range</span>(n))   <span class="com"># each node is its own parent (root)</span>
+        self.rank = [<span class="num">1</span>] * n            <span class="com"># tree height/size estimate</span>
+
+    <span class="kw">def</span> <span class="fn">find</span>(self, x):
+        <span class="kw">if</span> self.parent[x] != x:        <span class="com"># not a root yet</span>
+            self.parent[x] = self.<span class="fn">find</span>(self.parent[x])  <span class="com"># path compression</span>
+        <span class="kw">return</span> self.parent[x]          <span class="com"># return the root</span>
+
+    <span class="kw">def</span> <span class="fn">union</span>(self, x, y):
+        rx, ry = self.<span class="fn">find</span>(x), self.<span class="fn">find</span>(y)  <span class="com"># roots of each group</span>
+        <span class="kw">if</span> rx == ry:                   <span class="com"># already same group</span>
+            <span class="kw">return</span> <span class="kw">False</span>              <span class="com"># nothing merged</span>
+        <span class="kw">if</span> self.rank[rx] &lt; self.rank[ry]:   <span class="com"># make rx the taller root</span>
+            rx, ry = ry, rx
+        self.parent[ry] = rx           <span class="com"># attach shorter under taller</span>
+        <span class="kw">if</span> self.rank[rx] == self.rank[ry]:  <span class="com"># tie -> taller by one</span>
+            self.rank[rx] += <span class="num">1</span>
+        <span class="kw">return</span> <span class="kw">True</span>                   <span class="com"># a real merge happened</span></code></pre>
+        </div>
+
+        <h4>Every line</h4>
+        <ul>
+          <li><code class="inline">self.parent = list(range(n))</code> — start with N separate groups; every node is its own root (<code class="inline">parent[i] == i</code>).</li>
+          <li><code class="inline">self.rank = [1]*n</code> — each single-node tree has rank 1. Rank guides union-by-rank.</li>
+          <li><code class="inline">def find(self, x):</code> — return x's root, compressing the path on the way.</li>
+          <li><code class="inline">if self.parent[x] != x:</code> — if x isn't already a root, keep climbing.</li>
+          <li><code class="inline">self.parent[x] = self.find(self.parent[x])</code> — <strong>path compression.</strong> Recursively find the root, then point x <em>directly</em> at it. This flattens the tree so future <code class="inline">find</code>s are fast.</li>
+          <li><code class="inline">return self.parent[x]</code> — hand back the root.</li>
+          <li><code class="inline">rx, ry = self.find(x), self.find(y)</code> — find both roots. Same root ⇒ already connected.</li>
+          <li><code class="inline">if rx == ry: return False</code> — they're already in one group; report "no merge." (Handy for cycle detection and counting.)</li>
+          <li><code class="inline">if self.rank[rx] &lt; self.rank[ry]: rx, ry = ry, rx</code> — ensure <code class="inline">rx</code> is the taller (higher-rank) root so we attach correctly.</li>
+          <li><code class="inline">self.parent[ry] = rx</code> — <strong>union by rank:</strong> hang the shorter tree under the taller root, keeping height minimal.</li>
+          <li><code class="inline">if self.rank[rx] == self.rank[ry]: self.rank[rx] += 1</code> — only when both had equal rank does the merged tree get one level taller.</li>
+          <li><code class="inline">return True</code> — a genuine merge occurred (two groups became one).</li>
+        </ul>
+
+        <h4>How to use it</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code>uf = <span class="fn">UnionFind</span>(<span class="num">5</span>)          <span class="com"># nodes 0..4, all separate</span>
+uf.<span class="fn">union</span>(<span class="num">0</span>, <span class="num">1</span>)             <span class="com"># group {0,1}</span>
+uf.<span class="fn">union</span>(<span class="num">1</span>, <span class="num">2</span>)             <span class="com"># group {0,1,2}</span>
+uf.<span class="fn">union</span>(<span class="num">3</span>, <span class="num">4</span>)             <span class="com"># group {3,4}</span>
+
+<span class="fn">print</span>(uf.<span class="fn">find</span>(<span class="num">0</span>) == uf.<span class="fn">find</span>(<span class="num">2</span>))  <span class="com"># True  (same group)</span>
+<span class="fn">print</span>(uf.<span class="fn">find</span>(<span class="num">0</span>) == uf.<span class="fn">find</span>(<span class="num">4</span>))  <span class="com"># False (different groups)</span>
+
+<span class="com"># number of distinct groups:</span>
+groups = <span class="fn">len</span>({uf.<span class="fn">find</span>(i) <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">5</span>)})  <span class="com"># 2</span></code></pre>
+        </div>
+        <p><span class="pill time">find / union: O(α(N)) ≈ O(1)</span><span class="pill space">Space: O(N)</span></p>
+      </div>
+    </section>
+
+    <!-- SECTION 7 -->
+    <section class="card blue" id="s7">
+      <div class="card-head">
+        <h2><span class="sec-num">7</span> LC 721 — Accounts Merge</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 11 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <h4>The problem in plain English</h4>
+        <p>Each account is <code class="inline">[name, email1, email2, ...]</code>. Two accounts belong to the <strong>same person</strong> if they share at least one email. Merge all accounts of the same person: output the name followed by <em>all</em> their emails, sorted, deduplicated. Different people can share the same name, so the <strong>name is not an identifier — shared emails are</strong>.</p>
+
+        <h4>The reframe</h4>
+        <p>Think of every <strong>email as a node</strong>. Within one account, all its emails are connected (they clearly belong together). If two accounts share an email, that shared email links their whole email-sets. So the task becomes: <strong>find connected components of emails, then group each component under its owner's name.</strong> "Connected components" screams <strong>Union Find</strong>.</p>
+
+        <h4>Intuition using Union Find</h4>
+        <p>Union all emails <em>within</em> each account together (e.g., union the first email with every other email in that account). Shared emails automatically stitch accounts into one component, because that email has one root no matter which account touched it. Then, for each email, look up its root and bucket emails by root. Each bucket = one person's full email set.</p>
+
+        <h4>Concrete walk-through</h4>
+        <p>Accounts:</p>
+        <ul>
+          <li>A: John, <code class="inline">j1@x</code>, <code class="inline">j2@x</code></li>
+          <li>B: John, <code class="inline">j3@x</code>, <code class="inline">j1@x</code></li>
+          <li>C: Mary, <code class="inline">m1@x</code></li>
+        </ul>
+        <div class="trace">
+          <div class="trace-step"><span class="badge">1</span><div>Account A: union <code class="inline">j1@x</code> with <code class="inline">j2@x</code>. Component: {j1, j2}.</div></div>
+          <div class="trace-step"><span class="badge">2</span><div>Account B: union <code class="inline">j3@x</code> with <code class="inline">j1@x</code>. Since <code class="inline">j1@x</code> is already with j2, now {j1, j2, j3} — accounts A and B merged <strong>through the shared email j1</strong>.</div></div>
+          <div class="trace-step"><span class="badge">3</span><div>Account C: union <code class="inline">m1@x</code> with itself. Component: {m1}.</div></div>
+          <div class="trace-step"><span class="badge">4</span><div>Group by root: {j1, j2, j3} → John; {m1} → Mary. Sort emails inside each group.</div></div>
+          <div class="trace-step"><span class="badge">✓</span><div>Output: <code class="inline">["John","j1@x","j2@x","j3@x"]</code> and <code class="inline">["Mary","m1@x"]</code>.</div></div>
+        </div>
+
+        <h4>Full solution</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> defaultdict
+
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">accountsMerge</span>(self, accounts):
+        parent = {}
+        <span class="kw">def</span> <span class="fn">find</span>(x):
+            parent.setdefault(x, x)      <span class="com"># first time seeing x -> its own root</span>
+            <span class="kw">if</span> parent[x] != x:
+                parent[x] = <span class="fn">find</span>(parent[x])  <span class="com"># path compression</span>
+            <span class="kw">return</span> parent[x]
+        <span class="kw">def</span> <span class="fn">union</span>(x, y):
+            parent[<span class="fn">find</span>(x)] = <span class="fn">find</span>(y)  <span class="com"># merge the two roots</span>
+
+        email_to_name = {}
+        <span class="kw">for</span> acc <span class="kw">in</span> accounts:
+            name = acc[<span class="num">0</span>]
+            first = acc[<span class="num">1</span>]
+            <span class="kw">for</span> email <span class="kw">in</span> acc[<span class="num">1</span>:]:      <span class="com"># every email in this account</span>
+                email_to_name[email] = name   <span class="com"># remember its owner's name</span>
+                <span class="fn">union</span>(first, email)   <span class="com"># tie all emails of this account together</span>
+
+        groups = defaultdict(list)
+        <span class="kw">for</span> email <span class="kw">in</span> email_to_name:  <span class="com"># bucket emails by their root</span>
+            groups[<span class="fn">find</span>(email)].append(email)
+
+        result = []
+        <span class="kw">for</span> root, emails <span class="kw">in</span> groups.items():
+            name = email_to_name[root]
+            result.append([name] + <span class="fn">sorted</span>(emails))  <span class="com"># name + sorted emails</span>
+        <span class="kw">return</span> result</code></pre>
+        </div>
+
+        <h4>Every line, tied to the intuition</h4>
+        <ul>
+          <li><code class="inline">parent = {}</code> — a dict-based Union Find (emails are strings, so a dict beats an array).</li>
+          <li><code class="inline">parent.setdefault(x, x)</code> — lazily register an email as its own root the first time we see it.</li>
+          <li><code class="inline">find</code> with <code class="inline">parent[x] = find(parent[x])</code> — the root lookup with path compression, so components collapse flat.</li>
+          <li><code class="inline">union(x, y): parent[find(x)] = find(y)</code> — connect two emails by pointing one root at the other. This is what makes emails in the same account (and across accounts sharing an email) one component.</li>
+          <li><code class="inline">email_to_name[email] = name</code> — record who owns each email, so after grouping we can label each bucket. (Safe because same-component emails share the same person.)</li>
+          <li><code class="inline">union(first, email)</code> — <strong>the core linking step.</strong> Union the account's first email with each of its other emails, so the whole account is one component. When another account reuses one of these emails, its union pulls both accounts into a single component through that shared email.</li>
+          <li><code class="inline">groups[find(email)].append(email)</code> — bucket every email under its component's root. Each bucket is one person's complete email set.</li>
+          <li><code class="inline">result.append([name] + sorted(emails))</code> — build the output line: the owner's name, then all emails sorted as required.</li>
+        </ul>
+
+        <h4>Complexity</h4>
+        <p>Let N = total number of emails across all accounts.</p>
+        <p><span class="pill time">Time: O(N · α(N) + N log N)</span> Unions/finds are near-constant; the <code class="inline">sorted(emails)</code> per group sums to O(N log N), which dominates.</p>
+        <p><span class="pill space">Space: O(N)</span> Parent map, name map, and the groups all scale with the number of emails.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 8 -->
+    <section class="card" id="s8">
+      <div class="card-head">
+        <h2><span class="sec-num">8</span> LC 1258 — Synonymous Sentences</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 11 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <h4>The problem</h4>
+        <p>You're given a list of <code class="inline">synonyms</code> pairs like <code class="inline">["happy","joy"]</code> and a sentence <code class="inline">text</code>. Any word can be replaced by any of its synonyms — and synonyms are <strong>transitive</strong> (if happy≈joy and joy≈cheerful, then happy≈cheerful). Return <strong>all possible sentences</strong> you can form, sorted lexicographically.</p>
+
+        <h4>The reframe</h4>
+        <p>Each word is a node; each synonym pair is an edge. <strong>Transitive synonyms = connected components.</strong> So group words into synonym-sets with Union Find. Then, for each word in the sentence that belongs to a synonym group, its replacement choices are <em>all words in that group</em>. Generate every combination across the sentence's positions.</p>
+
+        <h4>Intuition</h4>
+        <ol>
+          <li><strong>Union</strong> every synonym pair, forming groups of interchangeable words.</li>
+          <li>For each group root, gather the <strong>sorted list of words</strong> in that group.</li>
+          <li>Walk the sentence. For a word with synonyms, its options are its whole group (sorted); otherwise the only option is the word itself.</li>
+          <li><strong>Backtrack</strong> to build every combination, then sort the results.</li>
+        </ol>
+
+        <h4>Full solution</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> defaultdict
+
+<span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">generateSentences</span>(self, synonyms, text):
+        parent = {}
+        <span class="kw">def</span> <span class="fn">find</span>(x):
+            parent.setdefault(x, x)
+            <span class="kw">if</span> parent[x] != x:
+                parent[x] = <span class="fn">find</span>(parent[x])   <span class="com"># path compression</span>
+            <span class="kw">return</span> parent[x]
+        <span class="kw">def</span> <span class="fn">union</span>(x, y):
+            parent[<span class="fn">find</span>(x)] = <span class="fn">find</span>(y)     <span class="com"># merge two synonym groups</span>
+
+        <span class="kw">for</span> a, b <span class="kw">in</span> synonyms:           <span class="com"># build synonym components</span>
+            <span class="fn">union</span>(a, b)
+
+        <span class="com"># group every known word by its root</span>
+        groups = defaultdict(list)
+        <span class="kw">for</span> word <span class="kw">in</span> parent:
+            groups[<span class="fn">find</span>(word)].append(word)
+        <span class="kw">for</span> root <span class="kw">in</span> groups:
+            groups[root].sort()          <span class="com"># lexicographic within a group</span>
+
+        words = text.split()
+        options = []                     <span class="com"># choices for each position</span>
+        <span class="kw">for</span> w <span class="kw">in</span> words:
+            <span class="kw">if</span> w <span class="kw">in</span> parent:            <span class="com"># word has synonyms</span>
+                options.append(groups[<span class="fn">find</span>(w)])
+            <span class="kw">else</span>:
+                options.append([w])      <span class="com"># no synonyms -> itself only</span>
+
+        result = []
+        <span class="kw">def</span> <span class="fn">backtrack</span>(i, path):
+            <span class="kw">if</span> i == <span class="fn">len</span>(options):
+                result.append(<span class="str">" "</span>.join(path))
+                <span class="kw">return</span>
+            <span class="kw">for</span> choice <span class="kw">in</span> options[i]:   <span class="com"># try each synonym at position i</span>
+                <span class="fn">backtrack</span>(i + <span class="num">1</span>, path + [choice])
+
+        <span class="fn">backtrack</span>(<span class="num">0</span>, [])
+        <span class="kw">return</span> result                   <span class="com"># already sorted (groups sorted)</span></code></pre>
+        </div>
+
+        <h4>Every line, tied to the intuition</h4>
+        <ul>
+          <li><code class="inline">find</code> / <code class="inline">union</code> — the standard dict-based Union Find. Words are the elements.</li>
+          <li><code class="inline">for a, b in synonyms: union(a, b)</code> — <strong>step 1:</strong> connect each synonym pair. Transitivity is automatic — chaining unions merges chains of synonyms into one component.</li>
+          <li><code class="inline">groups[find(word)].append(word)</code> — <strong>step 2:</strong> bucket words by component root. Each bucket is one synonym set.</li>
+          <li><code class="inline">groups[root].sort()</code> — sort each group so choices come out lexicographically; this makes the final result sorted without an extra global sort of full sentences.</li>
+          <li><code class="inline">words = text.split()</code> — break the sentence into positions.</li>
+          <li><code class="inline">if w in parent: options.append(groups[find(w)])</code> — <strong>step 3:</strong> if the word is part of a synonym group, its options are the entire (sorted) group.</li>
+          <li><code class="inline">else: options.append([w])</code> — a word with no synonyms can only be itself.</li>
+          <li><code class="inline">def backtrack(i, path):</code> — <strong>step 4:</strong> build sentences position by position.</li>
+          <li><code class="inline">if i == len(options): result.append(" ".join(path))</code> — a full sentence is assembled; record it.</li>
+          <li><code class="inline">for choice in options[i]: backtrack(i+1, path+[choice])</code> — try every synonym at this position and recurse. This enumerates the full cartesian product of choices.</li>
+          <li><code class="inline">return result</code> — because each position's options are pre-sorted and we iterate them in order, the sentences come out lexicographically sorted.</li>
+        </ul>
+
+        <h4>Complexity</h4>
+        <p>Let S = number of synonym pairs, L = words in the sentence, and K = the largest number of choices per position.</p>
+        <p><span class="pill time">Time: O(S·α + total output size)</span> Building groups is near-linear; generating sentences is inherently O(number of results × sentence length) because there can be up to K<sup>L</sup> sentences and you must emit all of them.</p>
+        <p><span class="pill space">Space: O(number of words + output)</span> Union Find and group buckets are linear; the result list holds every generated sentence.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 9 -->
+    <section class="card" id="s9">
+      <div class="card-head">
+        <h2><span class="sec-num">9</span> Templates to Know Cold</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 6 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <p>These three carry every problem in this file. Reproduce them from memory before you close the page.</p>
+
+        <h4>1 · Topological Sort — Kahn's (BFS)</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque, defaultdict
+
+<span class="kw">def</span> <span class="fn">topo_kahn</span>(n, edges):
+    adj = defaultdict(list)
+    indeg = [<span class="num">0</span>] * n
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:        <span class="com"># edge u -> v</span>
+        adj[u].append(v)
+        indeg[v] += <span class="num">1</span>          <span class="com"># v gains a prerequisite</span>
+    q = deque([i <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n) <span class="kw">if</span> indeg[i] == <span class="num">0</span>])
+    order = []
+    <span class="kw">while</span> q:
+        node = q.popleft()       <span class="com"># no prereqs left</span>
+        order.append(node)
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:
+            indeg[nei] -= <span class="num">1</span>
+            <span class="kw">if</span> indeg[nei] == <span class="num">0</span>:
+                q.append(nei)
+    <span class="kw">return</span> order <span class="kw">if</span> <span class="fn">len</span>(order) == n <span class="kw">else</span> []  <span class="com"># [] = cycle</span></code></pre>
+        </div>
+
+        <h4>2 · Topological Sort — DFS (post-order)</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">def</span> <span class="fn">topo_dfs</span>(n, edges):
+    adj = defaultdict(list)
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:
+        adj[u].append(v)
+    state = [<span class="num">0</span>] * n            <span class="com"># 0=unseen 1=on-path 2=done</span>
+    order, cycle = [], [<span class="kw">False</span>]
+
+    <span class="kw">def</span> <span class="fn">dfs</span>(node):
+        <span class="kw">if</span> state[node] == <span class="num">1</span>:      <span class="com"># back-edge -> cycle</span>
+            cycle[<span class="num">0</span>] = <span class="kw">True</span>; <span class="kw">return</span>
+        <span class="kw">if</span> state[node] == <span class="num">2</span>:
+            <span class="kw">return</span>
+        state[node] = <span class="num">1</span>
+        <span class="kw">for</span> nei <span class="kw">in</span> adj[node]:
+            <span class="fn">dfs</span>(nei)
+        state[node] = <span class="num">2</span>
+        order.append(node)          <span class="com"># POST-ORDER append</span>
+
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+        <span class="kw">if</span> state[i] == <span class="num">0</span>:
+            <span class="fn">dfs</span>(i)
+    <span class="kw">return</span> [] <span class="kw">if</span> cycle[<span class="num">0</span>] <span class="kw">else</span> order[::-<span class="num">1</span>]  <span class="com"># reverse!</span></code></pre>
+        </div>
+
+        <h4>3 · Union Find class</h4>
+        <div class="code-wrap">
+          <button class="copy-btn">Copy</button>
+<pre><code><span class="kw">class</span> <span class="fn">UnionFind</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, n):
+        self.parent = <span class="fn">list</span>(<span class="fn">range</span>(n))   <span class="com"># self-rooted</span>
+        self.rank = [<span class="num">1</span>] * n
+
+    <span class="kw">def</span> <span class="fn">find</span>(self, x):
+        <span class="kw">if</span> self.parent[x] != x:
+            self.parent[x] = self.<span class="fn">find</span>(self.parent[x])  <span class="com"># compress</span>
+        <span class="kw">return</span> self.parent[x]
+
+    <span class="kw">def</span> <span class="fn">union</span>(self, x, y):
+        rx, ry = self.<span class="fn">find</span>(x), self.<span class="fn">find</span>(y)
+        <span class="kw">if</span> rx == ry:
+            <span class="kw">return</span> <span class="kw">False</span>              <span class="com"># already connected</span>
+        <span class="kw">if</span> self.rank[rx] &lt; self.rank[ry]:
+            rx, ry = ry, rx
+        self.parent[ry] = rx           <span class="com"># small under big</span>
+        <span class="kw">if</span> self.rank[rx] == self.rank[ry]:
+            self.rank[rx] += <span class="num">1</span>
+        <span class="kw">return</span> <span class="kw">True</span></code></pre>
+        </div>
+
+        <div class="callout good">
+          <strong>Before you close this page:</strong> write all three from memory — Kahn's, DFS topo sort, and the Union Find class. Cues to lock in: Kahn's = <em>in-degree + queue, cycle if count &lt; n</em>. DFS topo = <em>post-order append, then reverse, three-color cycle check</em>. Union Find = <em>path compression in find, union by rank, return False when already joined</em>.
+        </div>
+      </div>
+    </section>
+
+    <!-- SUMMARY -->
+    <section class="card summary-card" id="summary">
+      <div class="card-head">
+        <h2><span class="sec-num">★</span> Summary — Key Things to Remember</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 2 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <div class="key-grid">
+          <div class="key-box"><h5>DAG = no cycles</h5><p>Topological sort exists only on a DAG. A cycle means no valid order.</p></div>
+          <div class="key-box"><h5>Kahn's = in-degree + queue</h5><p>Start at in-degree 0, decrement neighbors, enqueue when they hit 0. Fewer than n processed = cycle.</p></div>
+          <div class="key-box"><h5>DFS topo = post-order + reverse</h5><p>Append after visiting neighbors, then reverse. Three-color states catch cycles.</p></div>
+          <div class="key-box"><h5>207 vs 210</h5><p>Same algorithm. 207 returns count==n; 210 returns the order list itself.</p></div>
+          <div class="key-box"><h5>Union Find = groups</h5><p>find = which group (root); union = merge. Same root ⇒ same component.</p></div>
+          <div class="key-box"><h5>Two optimizations</h5><p>Path compression flattens on find; union by rank attaches small under big. Together ≈ O(1).</p></div>
+          <div class="key-box"><h5>Connected components → Union Find</h5><p>Accounts Merge & Synonyms both reduce to "group connected things," the DSU signature.</p></div>
+          <div class="key-box"><h5>Cycle detection two ways</h5><p>Kahn: leftover nodes. DFS: revisiting an on-path (state 1) node.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SELF TEST -->
+    <section class="card blue" id="selftest">
+      <div class="card-head">
+        <h2><span class="sec-num">✎</span> Self Test — Check Your Understanding</h2>
+        <div style="display:flex;align-items:center;gap:10px;"><span class="read-time">⏱ 7 min</span><span class="arrow">▼</span></div>
+      </div>
+      <div class="card-body">
+        <p>Understanding checks, not recall. Reason it out before revealing.</p>
+
+        <div class="qa">
+          <div class="qa-q">Q1. In Kahn's algorithm, you finish and find <code class="inline">len(order) == 4</code> but the graph has 6 nodes. What does that tell you, and where did the other 2 nodes go? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>There's a <strong>cycle</strong> involving those 2 nodes. They (and any node whose only path in runs through the cycle) never reached in-degree 0, so they were never enqueued or placed in <code class="inline">order</code>. A cycle means no valid topological ordering exists — which for Course Schedule means "you can't finish all courses."</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q2. In DFS-based topo sort, why must we <em>reverse</em> the list at the end? What would happen if we returned it as-is? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>We append each node in <strong>post-order</strong> — <em>after</em> its descendants are done — so dependencies land in the list <em>before</em> the nodes that depend on them. That's the reverse of what we want. If we returned it un-reversed, edge A → B would show B before A, violating the ordering. Reversing puts every prerequisite ahead of what it unlocks.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q3. Someone removes union-by-rank from the Union Find class but keeps path compression. Is it still correct? Is it still fast? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p><strong>Still correct</strong> — grouping logic is unchanged; find still returns the right root. <strong>Still fast in practice</strong> — path compression alone gives O(log N) amortized, and combined-with-nothing is close enough for interviews. But you lose the near-O(1) guarantee that <em>both</em> optimizations together provide. Best answer: keep both; each protects against a different worst case (tall chains).</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q4. In Accounts Merge, why can't we just group accounts by name? Give a case where that fails. <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>Because <strong>different people can share a name</strong>. Two accounts both named "John" with <em>no</em> shared emails are different people and must stay separate. Conversely, one person might appear under accounts that share an email. Identity is defined by <strong>shared emails (connected components)</strong>, not the name — which is exactly why we union on emails and only use the name as a label at the end.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q5. Both this file's grouping problems (Accounts Merge, Synonymous Sentences) could technically be solved with DFS/BFS connected components instead of Union Find. Why is Union Find often the cleaner choice here? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>Because the connections arrive as <strong>incremental pairwise merges</strong> (this email links to that one; this word is a synonym of that one). Union Find is built exactly for "keep merging pairs and ask what's connected," with near-constant operations and no need to build an explicit adjacency list first. DFS/BFS also work, but you'd construct the graph, then traverse it — more setup for the same result. When the problem is phrased as "merge these pairs into groups," reach for Union Find.</p></div>
+        </div>
+
+        <div class="qa">
+          <div class="qa-q">Q6. Why does sorting each synonym group in LC 1258 make the final list of sentences come out lexicographically sorted, without sorting the sentences themselves? <span class="q-ar">▶</span></div>
+          <div class="qa-a"><p>Backtracking generates sentences by iterating each position's options <strong>in order</strong>. If every position's option list is sorted, the leftmost position varies slowest and its smallest choice is emitted first, then the next position, and so on — exactly how lexicographic order is defined across the sentence. The cartesian product enumerated in sorted-per-position order <em>is</em> the globally sorted order, so no final sort of full strings is needed.</p></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<button id="toTop" title="Back to top">↑</button>
+
+<script>
+(function(){
+  var STORE_KEY = 'day6_topo_uf_progress';
+
+  document.querySelectorAll('.card-head').forEach(function(h){
+    h.addEventListener('click', function(){ h.parentElement.classList.toggle('collapsed'); });
+  });
+
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var pre = btn.parentElement.querySelector('pre');
+      var text = pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      }).catch(function(){
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(err){}
+        document.body.removeChild(ta);
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      });
+    });
+  });
+
+  document.querySelectorAll('.qa-q').forEach(function(q){
+    q.addEventListener('click', function(){ q.parentElement.classList.toggle('open'); });
+  });
+
+  var boxes = document.querySelectorAll('#checkGrid input[type=checkbox]');
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ saved = {}; }
+
+  function refresh(){
+    var done = 0;
+    boxes.forEach(function(b){
+      if(b.checked){ done++; b.closest('.check-item').classList.add('done'); }
+      else { b.closest('.check-item').classList.remove('done'); }
+    });
+    var pct = Math.round(done / boxes.length * 100);
+    document.getElementById('pctText').textContent = done + ' of ' + boxes.length + ' sections complete';
+    document.getElementById('miniFill').style.width = pct + '%';
+  }
+
+  boxes.forEach(function(b){
+    var k = b.getAttribute('data-k');
+    if(saved[k]) b.checked = true;
+    b.addEventListener('change', function(){
+      saved[k] = b.checked;
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(saved)); } catch(e){}
+      refresh();
+    });
+  });
+  refresh();
+
+  var pb = document.getElementById('progressBar');
+  var toTop = document.getElementById('toTop');
+  window.addEventListener('scroll', function(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    pb.style.width = (scrolled * 100) + '%';
+    toTop.style.display = h.scrollTop > 400 ? 'flex' : 'none';
+  });
+  toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  var links = document.querySelectorAll('.sidebar-inner a');
+  var sections = [];
+  links.forEach(function(l){
+    var id = l.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if(el) sections.push({link:l, el:el});
+  });
+  window.addEventListener('scroll', function(){
+    var pos = window.scrollY + 120;
+    var current = null;
+    sections.forEach(function(s){ if(s.el.offsetTop <= pos) current = s; });
+    links.forEach(function(l){ l.classList.remove('active'); });
+    if(current) current.link.classList.add('active');
+  });
+})();
+</script>
+</body>
+</html>
