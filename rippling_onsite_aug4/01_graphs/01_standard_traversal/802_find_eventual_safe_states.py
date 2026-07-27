@@ -43,7 +43,7 @@ def eventualSafeNodes(graph):
             if outdegree[nei] == 0:
                 queue.append(nei)
 
-
+    
 
     return sorted(res)
 
